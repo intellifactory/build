@@ -1,0 +1,6 @@
+(bin|obj)/(Debug|Release)
+\.nupkg$
+\.suo$
+\~$
+^\.nuget
+^packages/
