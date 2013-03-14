@@ -2,5 +2,6 @@
 \.nupkg$
 \.suo$
 \~$
+^\.build
 ^\.nuget
 ^packages/
