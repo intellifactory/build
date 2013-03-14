@@ -45,6 +45,8 @@
     <Compile Include="VsTemplates.fs" />
     <Compile Include="VsixExtensions.fsi" />
     <Compile Include="VsixExtensions.fs" />
+    <Compile Include="Mercurial.fsi" />
+    <Compile Include="Mercurial.fs" />
   </ItemGroup>
   <Import Project="..\Build\Common.targets" />
 </Project>
