@@ -19,7 +19,7 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="..\IntelliFactory.Build\bin\Release-v4.0\IntelliFactory.Build.dll" target="lib\net40\" />
-    <file src="..\IntelliFactory.Build\bin\Release-v4.0\IntelliFactory.Build.xml" target="lib\net40\" />
+    <file src="..\IntelliFactory.Build\bin\Release\IntelliFactory.Build.dll" target="lib\net40\" />
+    <file src="..\IntelliFactory.Build\bin\Release\IntelliFactory.Build.xml" target="lib\net40\" />
   </files>
 </package>
