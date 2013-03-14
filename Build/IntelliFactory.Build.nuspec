@@ -2,24 +2,21 @@
 <package>
   <metadata>
     <id>IntelliFactory.Build</id>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <authors>IntelliFactory</authors>
     <owners>IntelliFactory</owners>
     <licenseUrl>http://apache.org/licenses/LICENSE-2.0.html</licenseUrl>
     <projectUrl>http://bitbucket.org/IntelliFactory/build</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <copyright>Copyright 2013 (c) IntelliFactory</copyright>
-
     <description>Provides build utilites, in particular API for generating VisualStudio extensibility packages.</description>
-
     <tags>F# Build FAKE VSTemplate VSIX VisualStudio Extensibility</tags>
     <dependencies>
-      <dependency id="FSharp.Core.3" version="0.0.2" />
       <dependency id="DotNetZip" version="1.9.1.8" />
     </dependencies>
   </metadata>
   <files>
-    <file src="..\IntelliFactory.Build\bin\Release\IntelliFactory.Build.dll" target="lib\net40\" />
-    <file src="..\IntelliFactory.Build\bin\Release\IntelliFactory.Build.xml" target="lib\net40\" />
+    <file src="..\IntelliFactory.Build\bin\Release-v4.0\IntelliFactory.Build.dll" target="lib\net40\" />
+    <file src="..\IntelliFactory.Build\bin\Release-v4.0\IntelliFactory.Build.xml" target="lib\net40\" />
   </files>
 </package>

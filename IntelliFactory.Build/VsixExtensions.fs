@@ -26,6 +26,7 @@ module X = XmlGenerator
 [<AutoOpen>]
 module Util =
 
+    let ( +/ ) a b = Path.Combine(a, b)
     let XmlNamespace = "http://schemas.microsoft.com/developer/vsx-schema/2010"
     let XmlElement name = X.Element.Create(name, XmlNamespace)
 
@@ -66,7 +67,9 @@ module Util =
         e "Types" - [
             for ex in extensions do
                 let ext = ex.TrimStart('.')
-                if not (String.IsNullOrWhiteSpace ext) then
+                match ext.Trim() with
+                | "" -> ()
+                | ext ->
                     yield e "Default" + [
                         "Extension", ext
                         "ContentType", InferContentTypeByExtension ext
@@ -276,7 +279,7 @@ type Template =
         | VSTemplates.ItemTemplateKind -> "ItemTemplates"
 
     member this.Path =
-        Path.Combine [|
+        Array.reduce ( +/ ) [|
             yield this.DirectoryPath
             yield! this.Category
             yield this.Archive.ZipFileName

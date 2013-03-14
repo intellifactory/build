@@ -51,7 +51,13 @@ type Binary =
 
     static member ReadStream(s: Stream) =
         use m = new MemoryStream()
-        s.CopyTo(m)
+        let buf = Array.zeroCreate (8 * 1024)
+        let rec loop () =
+            let k = s.Read(buf, 0, buf.Length)
+            if k > 0 then
+                m.Write(buf, 0, k)
+                loop ()
+        loop ()
         { data = m.ToArray() }
 
 type Content =

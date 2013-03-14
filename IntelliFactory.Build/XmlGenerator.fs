@@ -20,6 +20,7 @@ open System.IO
 open System.Text
 open System.Xml
 open System.Xml.Linq
+module F = IntelliFactory.Build.FileSystem
 
 type Name =
     {
@@ -164,7 +165,7 @@ let rec WriteXml (x: XmlWriter) (this: INode) : unit =
 let WriteTo (create: XmlWriterSettings -> XmlWriter) (element: Element) : unit =
     let settings = XmlWriterSettings()
     settings.OmitXmlDeclaration <- true
-    settings.Encoding <- FileSystem.DefaultEncoding
+    settings.Encoding <- F.DefaultEncoding
     settings.Indent <- true
     settings.IndentChars <- " "
     use w = create settings

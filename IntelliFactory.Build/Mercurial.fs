@@ -24,8 +24,10 @@ let ParseHash (bytes: byte[]) : string =
     |> Array.map (fun b -> String.Format("{0:x2}", b))
     |> String.concat ""
 
+let ( +/ ) a b = Path.Combine (a, b)
+
 let InferTag (folder: string) : option<string> =
-    let tagsFile = Path.Combine(folder, ".hg", "cache", "tags")
+    let tagsFile = folder +/ ".hg" +/ "cache" +/ "tags"
     let tagMap =
         if File.Exists tagsFile then
             File.ReadAllLines tagsFile
@@ -37,7 +39,7 @@ let InferTag (folder: string) : option<string> =
             |> dict
         else
             dict []
-    let dirStateFile = Path.Combine(folder, ".hg", "dirstate")
+    let dirStateFile = folder +/ ".hg" +/ "dirstate"
     if File.Exists dirStateFile then
         let hash = ParseHash (File.ReadAllBytes dirStateFile)
         match tagMap.TryGetValue(hash) with
