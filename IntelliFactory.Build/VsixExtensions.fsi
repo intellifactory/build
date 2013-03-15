@@ -22,6 +22,7 @@ module IntelliFactory.Build.VsixExtensions
 open System
 open System.Globalization
 module F = FileSystem
+module V = VsixPackages
 
 /// Represents VisualStudio editions.
 type VSEdition =
@@ -83,7 +84,7 @@ type Identifier =
         mutable Author : string
         mutable Culture : CultureInfo
         mutable Description : string
-        mutable Id : Guid
+        mutable Id : V.Identity
         mutable Name : string
         mutable Products : list<SupportedProduct>
         mutable SupportedFrameworks : SupportedFrameworks
@@ -91,7 +92,7 @@ type Identifier =
     }
 
     /// Creates a bare-bones identification section.
-    static member Create : author: string -> id: Guid -> name: string -> desc: string -> Identifier
+    static member Create : author: string -> id: V.Identity -> name: string -> desc: string -> Identifier
 
 /// Represents installed assemblies.
 type Assembly =
@@ -112,17 +113,18 @@ type CustomExtension =
     }
 
     /// Constructs a new `CustomExtension`.
-    static member Create : ty: string -> path: string -> content: F.Content -> CustomExtension
+    static member Create : path: string -> F.Content -> CustomExtension
 
-/// Represents installed templates.
-type Template =
+/// Represents installed project templates.
+type ProjectTemplate =
     {
         mutable Archive : VSTemplates.Archive
         mutable Category : list<string>
+        mutable Definition : VSTemplates.ProjectTemplate
     }
 
     /// Creates a new `Template`.
-    static member Create : category: seq<string> -> archive: VSTemplates.Archive -> Template
+    static member Create : category: seq<string> -> archive: VSTemplates.ProjectTemplate -> ProjectTemplate
 
 /// Represents installed MEF components.
 type MEFComponent =
@@ -159,12 +161,12 @@ type VsixContent =
     | AssemblyContent of Assembly
     | CustomExtensionContent of CustomExtension
     | MEFComponentContent of MEFComponent
-    | TemplateContent of Template
+    | ProjectTemplateContent of ProjectTemplate
     | ToolboxControlContent of ToolboxControl
     | VSPackageContent of VSPackage
 
-    /// Helper for quick definition of template contennts.
-    static member Template : category: seq<string> -> archive: VSTemplates.Archive -> VsixContent
+    /// Helper for quick definition of template contents.
+    static member ProjectTemplate : category: seq<string> -> archive: VSTemplates.ProjectTemplate -> VsixContent
 
 /// Respresents the top-level configuration element.
 type Vsix =

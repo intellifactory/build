@@ -1,4 +1,5 @@
-﻿<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>6af3b6cd-0373-4b08-abf3-d74355f592b0</ProjectGuid>
@@ -9,8 +10,10 @@
   <ItemGroup>
     <Compile Include="FileSystem.fsi" />
     <Compile Include="FileSystem.fs" />
+    <Compile Include="NuGet.fs" />
     <Compile Include="XmlGenerator.fsi" />
     <Compile Include="XmlGenerator.fs" />
+    <Compile Include="VsixPackages.fs" />
     <Compile Include="VsTemplates.fsi" />
     <Compile Include="VsTemplates.fs" />
     <Compile Include="VsixExtensions.fsi" />
@@ -18,6 +21,7 @@
     <Compile Include="Mercurial.fsi" />
     <Compile Include="Mercurial.fs" />
     <Compile Include="CommonBuildSetup.fs" />
+    <None Include="Try.fsx" />
     <EmbeddedResource Include="../Build/NuGet.targets">
       <Link>NuGet.targets</Link>
     </EmbeddedResource>

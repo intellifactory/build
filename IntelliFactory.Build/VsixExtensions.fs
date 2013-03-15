@@ -21,6 +21,7 @@ open System.Globalization
 open System.IO
 open Ionic.Zip
 module F = FileSystem
+module V = VsixPackages
 module X = XmlGenerator
 
 [<AutoOpen>]
@@ -176,7 +177,7 @@ type Identifier =
         mutable Author : string
         mutable Culture : CultureInfo
         mutable Description : string
-        mutable Id : Guid
+        mutable Id : V.Identity
         mutable Name : string
         mutable Products : list<SupportedProduct>
         mutable SupportedFrameworks : SupportedFrameworks
@@ -241,46 +242,47 @@ type CustomExtension =
         mutable Type : string
     }
 
-    static member Create t p c : CustomExtension =
+    static member Create p c : CustomExtension =
         {
             Content = c
             Path = p
-            Type = t
+            Type = Path.GetFileName(p)
+        }
+
+    static member NuGet(pkg: NuGet.Package) : CustomExtension =
+        let name = String.Format("{0}.{1}.nupkg", pkg.Name, pkg.Version)
+        {
+            Content = pkg.Content
+            Path = Path.Combine("packages", name)
+            Type = name
         }
 
     member this.ToXml() =
         E?CustomExtension + [A?Type this.Type] -- this.Path
 
-type Template =
+type ProjectTemplate =
     {
         mutable Archive : VSTemplates.Archive
         mutable Category : list<string>
+        mutable Definition : VSTemplates.ProjectTemplate
     }
 
-    static member Create cat d : Template =
+    static member Create cat d : ProjectTemplate =
         {
-            Archive = d
+            Archive = VSTemplates.Archive.Project d
             Category = Seq.toList cat
+            Definition = d
         }
 
     member this.ToXml() =
-        match this.Archive.Kind with
-        | VSTemplates.ProjectTemplateKind ->
-            E?ProjectTemplate -- "ProjectTemplates"
-        | VSTemplates.ItemTemplateKind ->
-            E?ItemTemplate -- "ItemTemplates"
+        E?ProjectTemplate -- "ProjectTemplates"
 
     member this.Content =
         F.BinaryContent this.Archive.Zip
 
-    member this.DirectoryPath =
-        match this.Archive.Kind with
-        | VSTemplates.ProjectTemplateKind -> "ProjectTemplates"
-        | VSTemplates.ItemTemplateKind -> "ItemTemplates"
-
     member this.Path =
         Array.reduce ( +/ ) [|
-            yield this.DirectoryPath
+            yield "ProjectTemplates"
             yield! this.Category
             yield this.Archive.ZipFileName
         |]
@@ -334,7 +336,7 @@ type VsixContent =
     | AssemblyContent of Assembly
     | CustomExtensionContent of CustomExtension
     | MEFComponentContent of MEFComponent
-    | TemplateContent of Template
+    | ProjectTemplateContent of ProjectTemplate
     | ToolboxControlContent of ToolboxControl
     | VSPackageContent of VSPackage
 
@@ -343,7 +345,7 @@ type VsixContent =
         | AssemblyContent x -> x.Content
         | CustomExtensionContent x -> x.Content
         | MEFComponentContent x -> x.Content
-        | TemplateContent x -> x.Content
+        | ProjectTemplateContent x -> x.Content
         | ToolboxControlContent x -> x.Content
         | VSPackageContent x -> x.Content
 
@@ -352,7 +354,7 @@ type VsixContent =
         | AssemblyContent x -> x.Path
         | CustomExtensionContent x -> x.Path
         | MEFComponentContent x -> x.Path
-        | TemplateContent x -> x.Path
+        | ProjectTemplateContent x -> x.Path
         | ToolboxControlContent x -> x.Path
         | VSPackageContent x -> x.Path
 
@@ -361,12 +363,13 @@ type VsixContent =
         | AssemblyContent x -> x.ToXml()
         | CustomExtensionContent x -> x.ToXml()
         | MEFComponentContent x -> x.ToXml()
-        | TemplateContent x -> x.ToXml()
+        | ProjectTemplateContent x -> x.ToXml()
         | ToolboxControlContent x -> x.ToXml()
         | VSPackageContent x -> x.ToXml()
 
-    static member Template cat t =
-        TemplateContent (Template.Create cat t)
+    static member ProjectTemplate cat t =
+        ProjectTemplateContent (ProjectTemplate.Create cat t)
+
 
 /// The `<Vsix>` element.
 type Vsix =
@@ -381,17 +384,54 @@ type Vsix =
             Contents = List.ofSeq c
         }
 
-    member this.GetPaths() =
-        [for c in this.Contents -> c.Path]
+    member this.GetPackages() =
+        let identity = this.Identifier.Id
+        [
+            for c in this.Contents do
+                match c with
+                | VsixContent.ProjectTemplateContent t ->
+                    match t.Definition.NuGetPackages with
+                    | None -> ()
+                    | Some packages ->
+                        if identity <> packages.Identity then
+                            failwith "Invalid NuGet package container identity"
+                        yield! packages.Packages
+                | _ -> ()
+        ]
+        |> Seq.distinctBy (fun pkg -> (pkg.Name, pkg.Version))
+
+    member this.GetContentsAndPackages() =
+        this.Contents @ [
+            for p in this.GetPackages() ->
+                CustomExtension.NuGet p
+                |> CustomExtensionContent
+        ]
 
     member this.GetEntries() =
-        [for c in this.Contents -> (c.Path, c.Content)]
+        [for c in this.GetContentsAndPackages() -> (c.Path, c.Content)]
+
+    member this.GetPaths() =
+        [for c in this.GetContentsAndPackages() -> c.Path]
 
     member this.ToXml() =
         E?Vsix + [A?Version "1.0.0"] - [
-            this.Identifier.ToXml()
-            E?References
-            E?Content - [for x in this.Contents -> x.ToXml()]
+            yield this.Identifier.ToXml()
+            yield
+                if Seq.isEmpty (this.GetPackages()) then
+                    E?References
+                else
+                    E?References - [
+                        E?Reference
+                            + [
+                                A?Id "NuPackToolsVsix.Microsoft.67e54e40-0ae3-42c5-a949-fddf5739e7a5"
+                                A?MinVersion "1.7.30402.9028"
+                            ]
+                            - [
+                                E?Name -- "NuGet Package Manager"
+                                E?MoreInfoUrl -- "http://docs.nuget.org/"
+                            ]
+                    ]
+            yield E?Content - [for x in this.GetContentsAndPackages() -> x.ToXml()]
         ]
 
 /// Represents an in-memory VSIX package.

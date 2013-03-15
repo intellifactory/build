@@ -21,6 +21,7 @@ open Microsoft.Win32
 open Ionic.Zip
 
 module F = FileSystem
+module V = VsixPackages
 module X = XmlGenerator
 
 [<AutoOpen>]
@@ -262,6 +263,7 @@ type TemplateData =
         mutable Name : string
         mutable ProjectSubType : option<string>
         mutable ProjectType : ProjectType
+        mutable PromptForSaveOnCreation : bool
         mutable SortOrder : option<int>
     }
 
@@ -271,6 +273,7 @@ type TemplateData =
             Description = desc
             Icon = icon
             Name = name
+            PromptForSaveOnCreation = true
             ProjectSubType = None
             ProjectType = ty
             SortOrder = None
@@ -295,11 +298,21 @@ type TemplateData =
                     E?Description -- d.Description
                     E?Icon -- d.Icon.FileName
                     E?ProjectType -- d.ProjectType.GetLiteral()
+                    E?PromptForSaveOnCreation -- BoolToString this.PromptForSaveOnCreation
                 ]
         E?TemplateData - content
 
+type NuGetPackages =
+    {
+        Identity : V.Identity
+        Packages : list<NuGet.Package>
+    }
+
+    static member Create id ps = { Identity = id; Packages = Seq.toList ps }
+
 type ProjectTemplate =
     {
+        mutable NuGetPackages : option<NuGetPackages>
         mutable Project : Project
         mutable TemplateData : TemplateData
         mutable Version : string
@@ -307,6 +320,7 @@ type ProjectTemplate =
 
     static member Create d p =
         {
+            NuGetPackages = None
             Project = p
             TemplateData = d
             Version = "3.0.0"
@@ -314,8 +328,23 @@ type ProjectTemplate =
 
     member this.ToXml() =
         E?VSTemplate + [A?Version this.Version; A?Type "Project"] - [
-            this.TemplateData.ToXml()
-            E?TemplateContent - [this.Project.ToXml()]
+            yield this.TemplateData.ToXml()
+            yield E?TemplateContent - [this.Project.ToXml()]
+            match this.NuGetPackages with
+            | None -> ()
+            | Some pkgs ->
+                yield E?WizardExtension - [
+                    E?Assembly -- "NuGet.VisualStudio.Interop, Version=1.0.0.0, \
+                        Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+                    E?FullClassName -- "NuGet.VisualStudio.TemplateWizard"
+                ]
+                yield E?WizardData - [
+                    E?packages + [A?repository "extension"; A?repositoryId (pkgs.Identity.GetFullId())]- [
+                        for p in pkgs.Packages ->
+                            E?package + [A?id p.Name; A?version (string p.Version)]
+                    ]
+                ]
+
         ]
 
 let AddContent (zip: ZipFile) (path: string) (content: F.Content) =

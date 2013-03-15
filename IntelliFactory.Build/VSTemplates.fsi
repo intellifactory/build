@@ -18,7 +18,9 @@
 /// an in-memory `.zip` representation you can then manipulate.
 module IntelliFactory.Build.VSTemplates
 
+open System
 module F = FileSystem
+module V = VsixPackages
 
 /// Defines a project item corresponding to the `ProjectItem` XML element
 /// within VisualStudio project templates.
@@ -142,6 +144,7 @@ type TemplateData =
         mutable Name : string
         mutable ProjectSubType : option<string>
         mutable ProjectType : ProjectType
+        mutable PromptForSaveOnCreation : bool
         mutable SortOrder : option<int>
     }
 
@@ -169,9 +172,23 @@ type InstallConfig =
     /// Creates a new `InstallConfig`.
     static member Create : category: seq<string> -> studio: VisualStudioVersion -> InstallConfig
 
+/// The NuGet packages required by the project templates.
+type NuGetPackages =
+    {
+        /// The unique identifier of the parent VSIX package.
+        Identity : V.Identity
+
+        /// The list of package references.
+        Packages : list<NuGet.Package>
+    }
+
+    /// Constructs a new instance.
+    static member Create : V.Identity -> seq<NuGet.Package> -> NuGetPackages
+
 /// Corresponds to the `VSTemplate` element of type `Project`.
 type ProjectTemplate =
     {
+        mutable NuGetPackages : option<NuGetPackages>
         mutable Project : Project
         mutable TemplateData : TemplateData
         mutable Version : string

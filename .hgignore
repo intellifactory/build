@@ -1,7 +1,9 @@
 (bin|obj)/(Debug|Release)
+/_
 \.nupkg$
 \.suo$
 \~$
 ^\.build
 ^\.nuget
+^\_
 ^packages/
