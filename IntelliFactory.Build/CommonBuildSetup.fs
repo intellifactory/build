@@ -87,14 +87,14 @@ let BuildProjXml (fakeVersion: string) =
         ]
         e "Target" + ["Name", "Build"; "DependsOnTargets", "Boot"] - [
             e "Exec" + [
-                "Command", @"""$(FSharpHome)/Fsi.exe"" --exec Build.fsx OutDir ""$(OutDir)"""
+                "Command", @"""$(FSharpHome)/Fsi.exe"" --exec Build.fsx OutDir ""$(OutDir)."""
                 "WorkingDirectory", "$(Root)"
                 "LogStandardErrorAsError", "true"
             ]
         ]
         e "Target" + ["Name", "Clean"] - [
             e "Exec" + [
-                "Command", @"""$(FSharpHome)/Fsi.exe"" --exec Build.fsx OutDir ""$(OutDir)"" Clean"
+                "Command", @"""$(FSharpHome)/Fsi.exe"" --exec Build.fsx OutDir ""$(OutDir)."" Clean"
                 "WorkingDirectory", "$(Root)"
                 "LogStandardErrorAsError", "true"
             ]
@@ -380,9 +380,11 @@ let GetOutDir () =
     |> Array.tryFindIndex ((=) "OutDir")
     |> Option.bind (fun i ->
         let k = i + 1
-        if k < args.Length && args.[k] <> null && args.[k] <> ""
-            then Some args.[k]
-            else None)
+        if k < args.Length then
+            match args.[k] with
+            | null | "" | "." -> None
+            | _ -> Some args.[k]
+        else None)
 
 type Solution =
     {
