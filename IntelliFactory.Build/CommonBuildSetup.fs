@@ -203,6 +203,35 @@ type FrameworkVersion =
         | Net40 -> "v4.0"
         | Net45 -> "v4.5"
 
+    member this.GetNuGetLiteral() =
+        match this with
+        | Net20 -> "net20"
+        | Net35 -> "net35"
+        | Net40 -> "net40"
+        | Net45 -> "net45"
+
+    static member All =
+        [Net20; Net35; Net40; Net45]
+
+    member this.IsSpecificPath(path) =
+        Path.GetFileName(path).ToLower() = this.GetNuGetLiteral()
+
+    member this.LowerFrameworks() =
+        List.filter (fun x -> x <= this) FrameworkVersion.All
+
+    member this.FindSearchDirs(root: string) =
+        let allDirs =
+            Directory.GetDirectories(Path.Combine(root, "packages"), "lib", SearchOption.AllDirectories)
+            |> Seq.collect (fun dir -> dir :: Seq.toList (Directory.GetDirectories(dir)))
+            |> Seq.distinct
+            |> Seq.cache
+        seq {
+            for f in List.rev (this.LowerFrameworks()) do
+                yield! Seq.filter f.IsSpecificPath allDirs
+        }
+        |> Seq.map (fun s -> s.Replace(root, "$(Root)"))
+        |> Seq.toList
+
 type ProjectKind =
     | FSharp
 
@@ -220,85 +249,86 @@ type Project =
             ProjectPath = solutionDir +/ name +/ (name + ".fsproj")
         }
 
-let GenerateFSharpTargetsXml (fsharpPackage: string) (searchDirs: seq<string>) =
+let GenerateFSharpTargetsXml (fsharpPackage: string) (root: string) =
     let e name = X.Element.Create(name, "http://schemas.microsoft.com/developer/msbuild/2003")
     let prop (name: string) (value: string) =
         e name + [ "Condition", String.Format(" '$({0})' == '' ", name) ] -- value
-    e "Project" + ["ToolsVersion", "4.0"; "DefaultTargets", "Build"] - [
-        e "PropertyGroup" - [
-            prop "Root" "$(MSBuildThisFileDirectory)/.."
-            prop "FSharpHome" "$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0"
-            prop "TargetFrameworkVersion" "v4.0"
-            prop "Platform" "AnyCPU"
-            prop "Configuration" "Release-$(TargetFrameworkVersion)"
-            prop "OutputPath" "bin/$(Configuration)/"
-            prop "DocumentationFile" "$(OutputPath)/$(Name).xml"
-            prop "RootNamespace" "$(Name)"
-            prop "AssemblyName" "$(Name)"
-            prop "WarningLevel" "3"
-            prop "UseFSharp23" "false"
+    let includes =
+        [
+            for f in FrameworkVersion.All ->
+                e "PropertyGroup"
+                    + ["Condition", String.Format(" '$(TargetFrameworkVersion)' == '{0}' ", f.GetMSBuildLiteral())]
+                    - [
+                        e "AssemblySearchPaths"
+                            -- String.concat ";" ("$(AssemblySearchPaths)" :: f.FindSearchDirs(root))
+                    ]
         ]
-        e "PropertyGroup"
-            + ["Condition", " '$(Configuration)|$(Platform)' == 'Debug-$(TargetFrameworkVersion)|AnyCPU' "]
-            - [
-                e "DebugSymbols" -- "true"
-                e "DebugType" -- "full"
-                e "Optimize" -- "false"
-                e "Tailcalls" -- "false"
-                e "DefineConstants" -- "DEBUG;TRACE"
+    let content =
+        [
+            e "PropertyGroup" - [
+                prop "Root" "$(MSBuildThisFileDirectory)/.."
+                prop "FSharpHome" "$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0"
+                prop "TargetFrameworkVersion" "v4.0"
+                prop "Platform" "AnyCPU"
+                prop "Configuration" "Release-$(TargetFrameworkVersion)"
+                prop "OutputPath" "bin/$(Configuration)/"
+                prop "DocumentationFile" "$(OutputPath)/$(Name).xml"
+                prop "RootNamespace" "$(Name)"
+                prop "AssemblyName" "$(Name)"
+                prop "WarningLevel" "3"
+                prop "UseFSharp23" "false"
             ]
-        e "PropertyGroup"
-            + ["Condition", " '$(Configuration)|$(Platform)' == 'Release-$(TargetFrameworkVersion)|AnyCPU' "]
-            - [
-                e "DebugType" -- "pdbonly"
-                e "Optimize" -- "true"
-                e "Tailcalls" -- "true"
-                e "DefineConstants" -- "TRACE"
+            e "PropertyGroup"
+                + ["Condition", " '$(Configuration)|$(Platform)' == 'Debug-$(TargetFrameworkVersion)|AnyCPU' "]
+                - [
+                    e "DebugSymbols" -- "true"
+                    e "DebugType" -- "full"
+                    e "Optimize" -- "false"
+                    e "Tailcalls" -- "false"
+                    e "DefineConstants" -- "DEBUG;TRACE"
+                ]
+            e "PropertyGroup"
+                + ["Condition", " '$(Configuration)|$(Platform)' == 'Release-$(TargetFrameworkVersion)|AnyCPU' "]
+                - [
+                    e "DebugType" -- "pdbonly"
+                    e "Optimize" -- "true"
+                    e "Tailcalls" -- "true"
+                    e "DefineConstants" -- "TRACE"
+                ]
+            e "ItemGroup" - [
+                e "Compile" + ["Include", "$(Root)/.build/AutoAssemblyInfo.fs"]
             ]
-        e "ItemGroup" - [
-            e "Compile" + ["Include", "$(Root)/.build/AutoAssemblyInfo.fs"]
+            e "ItemGroup" + ["Condition", "$(UseFSharp23)"] - [
+                e "Reference" + ["Include", "mscorlib"]
+                e "Reference" + ["Include", "System"]
+                e "Reference"
+                    + ["Include", "FSharp.Core, Version=2.3.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"]
+                    - [
+                        e "Private" -- "true"
+                        e "HintPath" -- String.Format("$(Root)/packages/{0}/lib/net20/FSharp.Core.dll", fsharpPackage)
+                        e "SpecificVersion" -- "true"
+                    ]
+            ]
+            e "ItemGroup" + ["Condition", "!$(UseFSharp23)"] - [
+                e "Reference" + ["Include", "mscorlib"]
+                e "Reference" + ["Include", "System"]
+                e "Reference" + ["Include", "System.Core"]
+                e "Reference" + ["Include", "System.Numerics"]
+                e "Reference"
+                    + ["Include", "FSharp.Core, Version=4.3.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"]
+                    - [
+                        e "Private" -- "true"
+                        e "HintPath" -- String.Format("$(Root)/packages/{0}/lib/net40/FSharp.Core.dll", fsharpPackage)
+                        e "SpecificVersion" -- "true"
+                    ]
+            ]
+            e "Import" + ["Project", "$(FSharpHome)/Microsoft.FSharp.targets"]
         ]
-        e "ItemGroup" + ["Condition", "$(UseFSharp23)"] - [
-            e "Reference" + ["Include", "mscorlib"]
-            e "Reference" + ["Include", "System"]
-            e "Reference"
-                + ["Include", "FSharp.Core, Version=2.3.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"]
-                - [
-                    e "Private" -- "true"
-                    e "HintPath" -- String.Format("$(Root)/packages/{0}/lib/net20/FSharp.Core.dll", fsharpPackage)
-                    e "SpecificVersion" -- "true"
-                ]
-        ]
-        e "ItemGroup" + ["Condition", "!$(UseFSharp23)"] - [
-            e "Reference" + ["Include", "mscorlib"]
-            e "Reference" + ["Include", "System"]
-            e "Reference" + ["Include", "System.Core"]
-            e "Reference" + ["Include", "System.Numerics"]
-            e "Reference"
-                + ["Include", "FSharp.Core, Version=4.3.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"]
-                - [
-                    e "Private" -- "true"
-                    e "HintPath" -- String.Format("$(Root)/packages/{0}/lib/net40/FSharp.Core.dll", fsharpPackage)
-                    e "SpecificVersion" -- "true"
-                ]
-        ]
-        e "Import" + ["Project", "$(FSharpHome)/Microsoft.FSharp.targets"]
-        e "PropertyGroup" - [
-            e "AssemblySearchPaths"
-                -- String.concat ";" ("$(AssemblySearchPaths)" :: Seq.toList searchDirs)
-        ]
-    ]
-
-let FindSearchDirs (root: string) =
-    Directory.GetDirectories(Path.Combine(root, "packages"), "lib", SearchOption.AllDirectories)
-    |> Seq.collect (fun dir -> dir :: Seq.toList (Directory.GetDirectories(dir)))
-    |> Seq.distinct
-    |> Seq.cache
+    e "Project" + ["ToolsVersion", "4.0"; "DefaultTargets", "Build"] - (content @ includes)
 
 let GenerateFSharpTargets (root: string) =
-    let searchDirs = FindSearchDirs root
     let fsVer = defaultArg (GetPackageVersion "FSharp.Core.3" root) "3.0.0.2"
-    let xml = GenerateFSharpTargetsXml ("FSharp.Core.3." + fsVer) searchDirs
+    let xml = GenerateFSharpTargetsXml ("FSharp.Core.3." + fsVer) root
     let text = F.TextContent (X.Write xml)
     text.WriteFile(root +/ ".build" +/ "FSharp.targets")
 

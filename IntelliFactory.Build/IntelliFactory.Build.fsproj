@@ -21,7 +21,6 @@
     <Compile Include="Mercurial.fsi" />
     <Compile Include="Mercurial.fs" />
     <Compile Include="CommonBuildSetup.fs" />
-    <None Include="Try.fsx" />
     <EmbeddedResource Include="../Build/NuGet.targets">
       <Link>NuGet.targets</Link>
     </EmbeddedResource>

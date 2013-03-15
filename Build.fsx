@@ -20,7 +20,7 @@ let Metadata =
     let m = B.Metadata.Create()
     m.Author <- Some "IntelliFactory"
     m.AssemblyVersion <- Some (Version "0.0.0.0")
-    m.FileVersion <- Some (Version "0.0.2.0")
+    m.FileVersion <- Some (Version "0.0.3.0")
     m.Description <- Some "Provides build utilites, in particular API for generating VisualStudio extensibility packages"
     m.Product <- Some "IntelliFactory.Build"
     m.Website <- Some "http://bitbucket.org/IntelliFactory/build"
