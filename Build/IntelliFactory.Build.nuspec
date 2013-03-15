@@ -2,7 +2,7 @@
 <package>
   <metadata>
     <id>IntelliFactory.Build</id>
-    <version>0.0.3</version>
+    <version>0.0.4</version>
     <authors>IntelliFactory</authors>
     <owners>IntelliFactory</owners>
     <licenseUrl>http://apache.org/licenses/LICENSE-2.0.html</licenseUrl>

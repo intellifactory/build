@@ -87,14 +87,14 @@ let BuildProjXml (fakeVersion: string) =
         ]
         e "Target" + ["Name", "Build"; "DependsOnTargets", "Boot"] - [
             e "Exec" + [
-                "Command", @"""$(FSharpHome)/Fsi.exe"" --exec Build.fsx"
+                "Command", @"""$(FSharpHome)/Fsi.exe"" --exec Build.fsx OutDir ""$(OutDir)"""
                 "WorkingDirectory", "$(Root)"
                 "LogStandardErrorAsError", "true"
             ]
         ]
         e "Target" + ["Name", "Clean"] - [
             e "Exec" + [
-                "Command", @"""$(FSharpHome)/Fsi.exe"" --exec Build.fsx Clean"
+                "Command", @"""$(FSharpHome)/Fsi.exe"" --exec Build.fsx OutDir ""$(OutDir)"" Clean"
                 "WorkingDirectory", "$(Root)"
                 "LogStandardErrorAsError", "true"
             ]
@@ -233,6 +233,7 @@ type FrameworkVersion =
         |> Seq.toList
 
 type ProjectKind =
+    | CSharp
     | FSharp
 
 type Project =
@@ -240,13 +241,23 @@ type Project =
         Frameworks : list<FrameworkVersion>
         ProjectKind : ProjectKind
         ProjectPath : string
+        Properties : Map<string,string>
     }
+
+    static member CSharp(name: string)(frameworks: seq<FrameworkVersion>)(solutionDir: string) : Project =
+        {
+            Frameworks = Seq.toList frameworks
+            ProjectKind = CSharp
+            ProjectPath = solutionDir +/ name +/ (name + ".csproj")
+            Properties = Map.empty
+        }
 
     static member FSharp(name: string)(frameworks: seq<FrameworkVersion>)(solutionDir: string) : Project =
         {
             Frameworks = Seq.toList frameworks
             ProjectKind = FSharp
             ProjectPath = solutionDir +/ name +/ (name + ".fsproj")
+            Properties = Map.empty
         }
 
 let GenerateFSharpTargetsXml (fsharpPackage: string) (root: string) =
@@ -344,14 +355,15 @@ let GenerateAssemblyInfos (root: string) (meta: Metadata) =
     let t2 = AssemblyInfo.GenerateAssemblyInfoText AssemblyInfo.CSharpFlavor settings
     (F.TextContent t2).WriteFile(root +/ ".build" +/ "AutoAssemblyInfo.cs")
 
-let MSBuild (projectFile: string) (framework: FrameworkVersion) (targets: seq<string>) =
+let MSBuild (projectFile: string) (framework: FrameworkVersion) (targets: seq<string>) (props: seq<string * string>) =
     let manager = Microsoft.Build.Execution.BuildManager.DefaultBuildManager
     let logger = Microsoft.Build.Logging.ConsoleLogger()
     let props =
         dict [
-            "Configuration", "Release-" + framework.GetMSBuildLiteral()
-            "TargetFrameworkVersion", framework.GetMSBuildLiteral()
-            "UseFSharp23",
+            yield! props
+            yield "Configuration", "Release-" + framework.GetMSBuildLiteral()
+            yield "TargetFrameworkVersion", framework.GetMSBuildLiteral()
+            yield "UseFSharp23",
                 match framework with
                 | Net20 | Net35 -> "true"
                 | _ -> "false"
@@ -362,6 +374,16 @@ let MSBuild (projectFile: string) (framework: FrameworkVersion) (targets: seq<st
     let result = manager.Build(par, rd)
     result.OverallResult = Microsoft.Build.Execution.BuildResultCode.Success
 
+let GetOutDir () =
+    let args = Environment.GetCommandLineArgs()
+    args
+    |> Array.tryFindIndex ((=) "OutDir")
+    |> Option.bind (fun i ->
+        let k = i + 1
+        if k < args.Length && args.[k] <> null && args.[k] <> ""
+            then Some args.[k]
+            else None)
+
 type Solution =
     {
         Metadata : Metadata
@@ -369,23 +391,19 @@ type Solution =
         RootDirectory : string
     }
 
-    member this.Auto(args: seq<string>) =
-        if Seq.exists ((=) "Clean") args
-            then this.Clean()
-            else this.Build()
-
-    member this.Build() =
+    member this.Build(?props: seq<string * string>) =
         GenerateFSharpTargets this.RootDirectory
         GenerateAssemblyInfos this.RootDirectory this.Metadata
-        this.MSBuild "Build"
+        this.MSBuild("Build", defaultArg props Seq.empty)
 
-    member this.Clean() =
-        this.MSBuild "Clean"
+    member this.Clean(?props: seq<string * string>) =
+        this.MSBuild("Clean", defaultArg props Seq.empty)
 
-    member this.MSBuild(target: string) =
+    member this.MSBuild(target: string, ?props: seq<string * string>) : unit=
         for p in this.Projects do
+            let props = Seq.append (Map.toSeq p.Properties) (defaultArg props Seq.empty)
             for fw in p.Frameworks do
-                let res = MSBuild p.ProjectPath fw [target]
+                let res = MSBuild p.ProjectPath fw [target] props
                 if not res then
                     failwith ("MSBuild failed: " + p.ProjectPath)
 
