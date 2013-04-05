@@ -425,16 +425,6 @@ type Solution =
 
 module Preparation =
 
-    /// Finds the latest installed version of a package in a local repository.
-    let GetPackageVersion
-            (packageId: string)
-            (repository: NuGet.IPackageRepository) :
-            option<NuGet.SemanticVersion> =
-        repository.GetPackages()
-        |> NG.MostRecent
-        |> Seq.tryPick (fun pkg ->
-            if pkg.Id = packageId then Some pkg.Version else None)
-
     /// Reads an embedded resource from the current assembly by name.
     let ReadEmbeddedTextFile (name: string) : string =
         let a = Assembly.GetExecutingAssembly()
@@ -445,64 +435,28 @@ module Preparation =
         use r = new StreamReader(s, F.DefaultEncoding)
         r.ReadToEnd()
 
-    let BuildProjXml (fakeVersion: NuGet.SemanticVersion) =
-        let e name = X.Element.Create(name, "http://schemas.microsoft.com/developer/msbuild/2003")
-        e "Project" + ["ToolsVersion", "4.0"; "DefaultTargets", "Build"] - [
-            e "PropertyGroup" - [
-                e "Root" -- "$(MSBuildThisFileDirectory)"
-                e "SolutionDir" -- "$(Root)"
-                e "FAKE" -- String.Format("$(Root)/packages/FAKE.{0}/tools/FAKE.exe", fakeVersion)
-            ]
-            e "Target" + ["Name", "Boot"] - [
-                e "MakeDir" + ["Directories", "$(Root)/.nuget"]
-                e "MSBuild" + [
-                    "Projects", "$(Root)/Build/NuGet.targets"
-                    "Properties", "DownloadNuGetExe=true;ProjectDir=$(Root);SolutionDir=$(Root)"
-                    "Targets", "RestorePackages"
-                ]
-            ]
-            e "Target" + ["Name", "Build"; "DependsOnTargets", "Boot"] - [
-                e "Exec" + [
-                    "Command", @"""$(FAKE)"" build.fsx Build WebOutDir=""$(OutDir)."""
-                    "WorkingDirectory", "$(Root)"
-                    "LogStandardErrorAsError", "true"
-                ]
-            ]
-            e "Target" + ["Name", "Clean"] - [
-                e "Exec" + [
-                    "Command", @"""$(FAKE)"" build.fsx Clean WebOutDir=""$(OutDir)."""
-                    "WorkingDirectory", "$(Root)"
-                    "LogStandardErrorAsError", "true"
-                ]
-            ]
-        ]
-
 let Prepare (trace: string -> unit) (solutionDir: string) =
     let pkgDir = solutionDir +/ "packages"
     if Directory.Exists pkgDir then
         let repo = NuGet.LocalPackageRepository(pkgDir)
-        let fakeVersion = Preparation.GetPackageVersion "FAKE" repo
-        match fakeVersion with
-        | None ->
-            trace "Unable to detect FAKE version. Is FAKE present in packages?"
-        | Some fakeVersion ->
-            let nugetTargets =
-                let p = solutionDir +/ ".build" +/ "NuGet.targets"
-                if File.Exists p then
-                    F.Content.ReadTextFile p
-                else
-                    Preparation.ReadEmbeddedTextFile "NuGet.targets"
-                    |> F.TextContent
+        let targets = solutionDir +/ ".build" +/ "NuGet.targets"
+        if File.Exists targets then
+            let nugetTargets = F.Content.ReadTextFile targets
             trace "Writing Build/NuGet.targets"
             nugetTargets.WriteFile(solutionDir +/ "Build" +/ "NuGet.targets")
-            String.Format("Writing Build.proj with FAKE version = {0}",
-                fakeVersion)
-            |> trace
-            X.WriteFile
-                (Path.Combine(solutionDir, "Build.proj"))
-                (Preparation.BuildProjXml fakeVersion)
+        else
+            let dump file folder =
+                let source =
+                    Preparation.ReadEmbeddedTextFile file
+                    |> F.TextContent
+                let target = solutionDir +/ folder +/ file
+                trace ("Writing " + target)
+                source.WriteFile(target)
+            dump "NuGet.targets" "Build"
+            dump "Build.proj" "."
+            dump "Build.cmd" "."
     else
-        trace (sprintf "Could not find packages directory: %s" pkgDir)
+        trace ("Could not find packages directory: " + pkgDir)
 
 //let GetOutDir () =
 //    let args = Environment.GetCommandLineArgs()

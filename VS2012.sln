@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Root", "Root", "{0CA19F83-5685-4269-ACA5-D8D046494C4B}"
 	ProjectSection(SolutionItems) = preProject
+		Build.cmd = Build.cmd
 		build.fsx = build.fsx
+		Build.proj = Build.proj
+		LICENSE.txt = LICENSE.txt
+		README.markdown = README.markdown
 	EndProjectSection
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "IntelliFactory.Build", "IntelliFactory.Build\IntelliFactory.Build.fsproj", "{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}"

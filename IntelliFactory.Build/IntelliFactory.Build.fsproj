@@ -24,6 +24,8 @@
     <Compile Include="CommonBuildSetup.fsi" />
     <Compile Include="CommonBuildSetup.fs" />
     <EmbeddedResource Include="../.build/NuGet.targets" />
+    <EmbeddedResource Include="../Build.proj" />
+    <EmbeddedResource Include="../Build.cmd" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
