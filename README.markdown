@@ -1,11 +1,13 @@
 # IntelliFactory.Build
 
-`IntelliFactory.Build` is currently a kitchen-sink assembly for build
-utilities we miss from `FAKE`. In particular, it provides F# API to:
+`IntelliFactory.Build` provides common utilities we need for building
+F# software. In particular, it provides F# API to:
 
 * Build VisualStudio VSTemplate packages
 
 * Build VisualStudio VSIX packages
+
+It works best with FAKE - the F# Make.
 
 ## Copying
 
@@ -24,7 +26,9 @@ mirror](http://github.com/intellifactory/build).
 
 ## Building
 
-Invoke `MSBuild.exe` in the root directory of the checkout.
+Invoke `Build.cmd` in the root directory of the checkout.
+
+If you have a recent FAKE, you can also invoke `fake boot auto`.
 
 ## Documentation
 
