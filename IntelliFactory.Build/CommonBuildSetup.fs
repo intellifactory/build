@@ -436,36 +436,19 @@ module Preparation =
         r.ReadToEnd()
 
 let Prepare (trace: string -> unit) (solutionDir: string) =
-    let pkgDir = solutionDir +/ "packages"
-    if Directory.Exists pkgDir then
-        let repo = NuGet.LocalPackageRepository(pkgDir)
-        let targets = solutionDir +/ ".build" +/ "NuGet.targets"
-        if File.Exists targets then
-            let nugetTargets = F.Content.ReadTextFile targets
-            trace "Writing Build/NuGet.targets"
-            nugetTargets.WriteFile(solutionDir +/ "Build" +/ "NuGet.targets")
-        else
-            let dump file folder =
-                let source =
-                    Preparation.ReadEmbeddedTextFile file
-                    |> F.TextContent
-                let target = solutionDir +/ folder +/ file
-                trace ("Writing " + target)
-                source.WriteFile(target)
-            dump "NuGet.targets" "Build"
-            dump "Build.proj" "."
-            dump "Build.cmd" "."
+    let targets = solutionDir +/ ".build" +/ "NuGet.targets"
+    if File.Exists targets then
+        let nugetTargets = F.Content.ReadTextFile targets
+        trace "Writing Build/NuGet.targets"
+        nugetTargets.WriteFile(solutionDir +/ "Build" +/ "NuGet.targets")
     else
-        trace ("Could not find packages directory: " + pkgDir)
-
-//let GetOutDir () =
-//    let args = Environment.GetCommandLineArgs()
-//    args
-//    |> Array.tryFindIndex ((=) "OutDir")
-//    |> Option.bind (fun i ->
-//        let k = i + 1
-//        if k < args.Length then
-//            match args.[k] with
-//            | null | "" | "." -> None
-//            | _ -> Some args.[k]
-//        else None)
+        let dump file folder =
+            let source =
+                Preparation.ReadEmbeddedTextFile file
+                |> F.TextContent
+            let target = solutionDir +/ folder +/ file
+            trace ("Writing " + target)
+            source.WriteFile(target)
+        dump "NuGet.targets" "Build"
+        dump "Build.proj" "."
+        dump "Build.cmd" "."

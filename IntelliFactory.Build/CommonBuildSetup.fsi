@@ -107,50 +107,5 @@ type Solution =
     member MSBuild : ?options: MSBuildOptions -> Async<unit>
 
 
-//    /// Builds the solution with in-process MSBuild.
-//    member this.MSBuild( ) =
-//
-//        failwth
-//
-//    member this.Build(?props: seq<string * string>) =
-//        GenerateFSharpTargets this.RootDirectory
-//        GenerateAssemblyInfos this.RootDirectory this.Metadata
-//        this.MSBuild("Build", defaultArg props Seq.empty)
-//
-//    member this.Clean(?props: seq<string * string>) =
-//        this.MSBuild("Clean", defaultArg props Seq.empty)
-//
-//    member this.MSBuild(target: string, ?props: seq<string * string>) : unit=
-//        for p in this.Projects do
-//            let props = Seq.append (Map.toSeq p.Properties) (defaultArg props Seq.empty)
-//            for fw in p.Frameworks do
-//                let res = MSBuild p.ProjectPath fw [target] props
-//                if not res then
-//                    failwith ("MSBuild failed: " + p.ProjectPath)
-//
-//    static member Standard(solutionDir: string)(meta: Metadata)(projects: seq<string -> Project>) : Solution =
-//        {
-//            Metadata = meta
-//            Projects = [ for p in projects -> p solutionDir ]
-//            RootDirectory = solutionDir
-//        }
-
-
-
-//
-//    static member CSharp(name: string)(frameworks: seq<FrameworkVersion>)(solutionDir: string) : Project =
-//        {
-//            Frameworks = Seq.toList frameworks
-//            ProjectKind = CSharp
-//            ProjectPath = solutionDir +/ name +/ (name + ".csproj")
-//            Properties = Map.empty
-//        }
-//
-//    static member FSharp(name: string)(frameworks: seq<FrameworkVersion>)(solutionDir: string) : Project =
-//        {
-//            Frameworks = Seq.toList frameworks
-//            ProjectKind = FSharp
-//            ProjectPath = solutionDir +/ name +/ (name + ".fsproj")
-//            Properties = Map.empty
-//        }
-
+/// Generates boostrapping MSBuild boilerplate in a given folder.
+val Prepare : trace: (string -> unit) -> solutionDir: string -> unit
