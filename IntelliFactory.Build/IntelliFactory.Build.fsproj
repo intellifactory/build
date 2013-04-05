@@ -23,9 +23,15 @@
     <Compile Include="Mercurial.fs" />
     <Compile Include="CommonBuildSetup.fsi" />
     <Compile Include="CommonBuildSetup.fs" />
-    <EmbeddedResource Include="../.build/NuGet.targets" />
-    <EmbeddedResource Include="../Build.proj" />
-    <EmbeddedResource Include="../Build.cmd" />
+    <EmbeddedResource Include="../.build/NuGet.targets">
+      <Link>NuGet.targets</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../Build.proj">
+      <Link>Build.proj</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../Build.cmd">
+      <Link>Build.cmd</Link>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

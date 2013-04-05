@@ -18,6 +18,7 @@ open System
 open System.IO
 open System.Runtime.Versioning
 open System.Collections.Generic
+open Mono.Cecil
 open NuGet
 module F = IntelliFactory.Build.FileSystem
 
@@ -94,6 +95,10 @@ let MostRecentReferences (refs: seq<IPackageAssemblyReference>) =
         variants
         |> Seq.maxBy (fun ref -> ref.TargetFramework.Version))
 
+let GetAssemblyPath (repo: LocalRepository) (pkg: IPackage) (ref: IPackageAssemblyReference) =
+    let dir = repo.PathResolver.GetPackageDirectory(pkg)
+    repo.Path +/ dir +/ ref.Path
+
 let ComputeReferences
         (fw: FrameworkName)
         (isRequired: IPackage -> bool)
@@ -107,7 +112,6 @@ let ComputeReferences
     |> MostRecent
     |> CompleteAndSortPackages lr fw
     |> Seq.iter (fun pkg ->
-        let dir = pr.GetPackageDirectory(pkg)
         pkg.FrameworkAssemblies
         |> Seq.filter (fun r -> IsSupported fw r.SupportedFrameworks)
         |> Seq.iter (fun r -> assemblyRefs.Add(r.AssemblyName) |> ignore)
@@ -117,7 +121,7 @@ let ComputeReferences
         |> Seq.map (fun r ->
             {
                 AssemblyName = r.Name
-                AssemblyPath = Some (lr.Path +/ dir +/ r.Path)
+                AssemblyPath = Some (GetAssemblyPath lr pkg r)
             })
         |> Seq.iter pkgRefs.Enqueue)
     Seq.ofArray [|

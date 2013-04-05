@@ -8,6 +8,7 @@ FB.Prepare {
             [
                 !"FAKE"
                 !"DotNetZip"
+                !"Mono.Cecil"
                 !"NuGet.Build"
                 !"NuGet.Core"
             ]
@@ -23,6 +24,7 @@ FB.Prepare {
 
 #load ".build/boot.fsx"
 #load "IntelliFactory.Build/FileSystem.fs"
+#load "IntelliFactory.Build/AssemblySigning.fs"
 #load "IntelliFactory.Build/XmlGenerator.fs"
 #load "IntelliFactory.Build/Mercurial.fs"
 #load "IntelliFactory.Build/NuGetUtils.fs"
@@ -61,7 +63,7 @@ let ReleaseNet40 : B.BuildConfiguration =
             let deps =
                 [
                     !"DotNetZip"
-                    !"NuGet.Build"
+                    !"Mono.Cecil"
                     !"NuGet.Core"
                 ]
             new NuGet.PackageDependencySet(B.Net40.ToFrameworkName(), deps)
@@ -127,6 +129,7 @@ Target "BuildNuGetPackage" <| fun () ->
             B.Net40.ToFrameworkName(),
             [
                 new NuGet.PackageDependency("DotNetZip")
+                new NuGet.PackageDependency("Mono.Cecil")
                 new NuGet.PackageDependency("NuGet.Core")
             ])
         |> builder.DependencySets.Add
@@ -147,17 +150,7 @@ Target "BuildNuGetPackage" <| fun () ->
     tracefn "Written %s" out
 
 Target "Build" <| fun () ->
-    Solution.MSBuild {
-        BuildConfiguration = None
-        Properties =
-            Map [
-                match Environment.GetEnvironmentVariable("INTELLIFACTORY") with
-                | null -> ()
-                | i ->
-                    yield "KeyOriginatorFile", i +/ "keys" +/ "IntelliFactory.snk"
-            ]
-        Targets = []
-    }
+    Solution.MSBuild()
     |> Async.RunSynchronously
 
 Target "Prepare" <| fun () ->
