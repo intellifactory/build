@@ -8,7 +8,6 @@ FB.Prepare {
             [
                 !"FAKE"
                 !"DotNetZip"
-                !"Mono.Cecil"
                 !"NuGet.Build"
                 !"NuGet.Core"
             ]
@@ -62,7 +61,6 @@ let ReleaseNet40 : B.BuildConfiguration =
             let deps =
                 [
                     !"DotNetZip"
-                    !"Mono.Cecil"
                     !"NuGet.Core"
                 ]
             new NuGet.PackageDependencySet(B.Net40.ToFrameworkName(), deps)
@@ -128,7 +126,6 @@ Target "BuildNuGetPackage" <| fun () ->
             B.Net40.ToFrameworkName(),
             [
                 new NuGet.PackageDependency("DotNetZip")
-                new NuGet.PackageDependency("Mono.Cecil")
                 new NuGet.PackageDependency("NuGet.Core")
             ])
         |> builder.DependencySets.Add
