@@ -24,7 +24,6 @@ FB.Prepare {
 
 #load ".build/boot.fsx"
 #load "IntelliFactory.Build/FileSystem.fs"
-#load "IntelliFactory.Build/AssemblySigning.fs"
 #load "IntelliFactory.Build/XmlGenerator.fs"
 #load "IntelliFactory.Build/Mercurial.fs"
 #load "IntelliFactory.Build/NuGetUtils.fs"
