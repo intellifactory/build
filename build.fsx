@@ -147,7 +147,17 @@ Target "BuildNuGetPackage" <| fun () ->
     tracefn "Written %s" out
 
 Target "Build" <| fun () ->
-    Solution.MSBuild()
+    Solution.MSBuild {
+        BuildConfiguration = None
+        Properties =
+            Map [
+                match Environment.GetEnvironmentVariable("INTELLIFACTORY") with
+                | null -> ()
+                | i ->
+                    yield "KeyOriginatorFile", i +/ "keys" +/ "IntelliFactory.snk"
+            ]
+        Targets = []
+    }
     |> Async.RunSynchronously
 
 Target "Prepare" <| fun () ->
