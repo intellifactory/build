@@ -14,6 +14,7 @@ FB.Prepare {
 }
 #else
 
+#r "System.ComponentModel.DataAnnotations"
 #r "System.Xml"
 #r "System.Xml.Linq"
 #r "Microsoft.Build"
@@ -37,13 +38,16 @@ module B = IntelliFactory.Build.CommonBuildSetup
 module F = IntelliFactory.Build.FileSystem
 module NG = IntelliFactory.Build.NuGetUtils
 
+let Company = "IntelliFactory"
+let PackageId = "IntelliFactory.Build"
+
 let Metadata =
     let m = B.Metadata.Create()
-    m.Author <- Some "IntelliFactory"
-    m.AssemblyVersion <- Some (Version "0.0.0.0")
-    m.FileVersion <- Some (Version "0.0.8.0")
+    m.Author <- Some Company
+    m.AssemblyVersion <- Some (Version "0.1.0.0")
+    m.FileVersion <- Some (Version "0.1.0.0")
     m.Description <- Some "Provides build utilites, in particular API for generating VisualStudio extensibility packages"
-    m.Product <- Some "IntelliFactory.Build"
+    m.Product <- Some PackageId
     m.Website <- Some "http://bitbucket.org/IntelliFactory/build"
     m
 
@@ -78,6 +82,16 @@ let Solution : B.Solution =
         RootDirectory = Root
     }
 
+let ComputeVersion () =
+    let fv = Metadata.FileVersion.Value
+    match NG.FindLatestOnlineVersion PackageId with
+    | None -> global.NuGet.SemanticVersion.Parse(string fv)
+    | Some v ->
+        let b = v.Version.Build + 1
+        match Metadata.VersionSuffix with
+        | None -> new global.NuGet.SemanticVersion(fv.Major, fv.Minor, b, "")
+        | Some vn -> new global.NuGet.SemanticVersion(fv.Major, fv.Minor, b, vn)
+
 Target "CopyNuGetTargets" <| fun () ->
     let repo = NG.LocalRepository.Create (Root +/ "packages")
     match NG.FindPackage repo "NuGet.Build" with
@@ -93,6 +107,45 @@ Target "CopyNuGetTargets" <| fun () ->
             let tgt = Root +/ ".build" +/ "NuGet.targets"
             F.Content.ReadTextFile(src).WriteFile(tgt)
 
+/// TODO: helpers for buliding packages from a solution spec.
+Target "BuildNuGetPackage" <| fun () ->
+    let version = ComputeVersion ()
+    let content =
+        use out = new MemoryStream()
+        let builder = new NuGet.PackageBuilder()
+        builder.Id <- PackageId
+        builder.Version <- version
+        builder.Authors.Add(Company) |> ignore
+        builder.Owners.Add(Company) |> ignore
+        builder.LicenseUrl <- Uri("http://apache.org/licenses/LICENSE-2.0.html")
+        builder.ProjectUrl <- Uri(defaultArg Metadata.Website "")
+        builder.Copyright <- String.Format("Copyright (c) {0} {1}", DateTime.Now.Year, Company)
+        builder.Description <- defaultArg Metadata.Description ""
+        "F# Build FAKE VSTemplate VSIX VisualStudio Extensibility".Split(' ')
+        |> Seq.iter (builder.Tags.Add >> ignore)
+        new NuGet.PackageDependencySet(
+            B.Net40.ToFrameworkName(),
+            [
+                new NuGet.PackageDependency("DotNetZip")
+                new NuGet.PackageDependency("NuGet.Core")
+            ])
+        |> builder.DependencySets.Add
+        for ext in [".xml"; ".dll"] do
+            let n = PackageId
+            builder.Files.Add
+                (
+                    let f = new NuGet.PhysicalPackageFile()
+                    f.SourcePath <- Root +/ n +/ "bin" +/ "Release-v4.0" +/ (n + ext)
+                    f.TargetPath <- "lib" +/ "net40" +/ (n + ext)
+                    f
+                )
+        builder.Save(out)
+        F.Binary.FromBytes (out.ToArray())
+        |> F.BinaryContent
+    let out = Root +/ ".build" +/ String.Format("IntelliFactory.Build.{0}.nupkg", version)
+    content.WriteFile(out)
+    tracefn "Written %s" out
+
 Target "Build" <| fun () ->
     Solution.MSBuild()
     |> Async.RunSynchronously
@@ -100,24 +153,8 @@ Target "Build" <| fun () ->
 Target "Prepare" <| fun () ->
     B.Prepare (tracefn "%s") Root
 
-"CopyNuGetTargets" ==> "Build"
+"CopyNuGetTargets" ==> "Build" ==> "BuildNuGetPackage"
 
-RunTargetOrDefault "Build"
-
-
-//module B = IntelliFactory.Build.CommonBuildSetup
-//
-//
-//let Frameworks = [B.Net40]
-//
-//let Solution =
-//    B.Solution.Standard __SOURCE_DIRECTORY__ Metadata [
-//        B.Project.FSharp "IntelliFactory.Build" Frameworks
-//    ]
-//
-//Target "Build" Solution.Build
-//Target "Clean" Solution.Clean
-//
-//RunTargetOrDefault "Build"
+RunTargetOrDefault "BuildNuGetPackage"
 
 #endif

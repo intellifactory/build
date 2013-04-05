@@ -74,3 +74,6 @@ type Package =
     /// Loads a nupkg file.
     static member FromFile : file: string -> Package
 
+/// Experimental utility method. Finds the most recent
+/// online version of a package on the default NuGet feed.
+val FindLatestOnlineVersion : packageId: string -> option<SemanticVersion>

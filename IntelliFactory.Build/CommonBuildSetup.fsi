@@ -89,6 +89,7 @@ type Metadata =
         mutable Description : option<string>
         mutable FileVersion : option<Version>
         mutable Product : option<string>
+        mutable VersionSuffix : option<string>
         mutable Website : option<string>
     }
 

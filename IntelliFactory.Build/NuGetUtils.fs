@@ -134,6 +134,13 @@ let FindPackage (repository: LocalRepository) (id: string) =
     |> MostRecent
     |> Seq.tryFind (fun pkg -> pkg.Id = id)
 
+let FindLatestOnlineVersion (packageId: string) =
+    let factory = global.NuGet.PackageRepositoryFactory.Default
+    let repo = new NuGet.AggregateRepository(factory, ["https://nuget.org/api/v2"], true)
+    match global.NuGet.PackageRepositoryExtensions.FindPackage(repo, packageId) with
+    | null -> None
+    | pkg -> Some pkg.Version
+
 type Package =
     {
         mutable Content : F.Content
