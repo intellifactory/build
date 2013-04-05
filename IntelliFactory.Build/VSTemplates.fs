@@ -305,7 +305,7 @@ type TemplateData =
 type NuGetPackages =
     {
         Identity : V.Identity
-        Packages : list<NuGet.Package>
+        Packages : list<NuGetUtils.Package>
     }
 
     static member Create id ps = { Identity = id; Packages = Seq.toList ps }

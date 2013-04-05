@@ -249,7 +249,7 @@ type CustomExtension =
             Type = Path.GetFileName(p)
         }
 
-    static member NuGet(pkg: NuGet.Package) : CustomExtension =
+    static member NuGet(pkg: NuGetUtils.Package) : CustomExtension =
         let name = String.Format("{0}.{1}.nupkg", pkg.Name, pkg.Version)
         {
             Content = pkg.Content

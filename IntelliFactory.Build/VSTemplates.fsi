@@ -179,11 +179,11 @@ type NuGetPackages =
         Identity : V.Identity
 
         /// The list of package references.
-        Packages : list<NuGet.Package>
+        Packages : list<NuGetUtils.Package>
     }
 
     /// Constructs a new instance.
-    static member Create : V.Identity -> seq<NuGet.Package> -> NuGetPackages
+    static member Create : V.Identity -> seq<NuGetUtils.Package> -> NuGetPackages
 
 /// Corresponds to the `VSTemplate` element of type `Project`.
 type ProjectTemplate =
