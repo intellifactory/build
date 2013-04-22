@@ -162,3 +162,20 @@ type Package =
             Name = pkg.Id
             Version = string pkg.Version
         }
+
+let ComputeVersion (packageId: string) (baseVersion: NuGet.SemanticVersion) : NuGet.SemanticVersion =
+    let o = baseVersion
+    let make b =
+        NuGet.SemanticVersion
+            (
+                Version(o.Version.Major, o.Version.Minor, b),
+                o.SpecialVersion
+            )
+    match FindLatestOnlineVersion packageId with
+    | None -> make o.Version.Build
+    | Some n ->
+        if o.Version.Major = n.Version.Major && o.Version.Minor = n.Version.Minor then
+            make (n.Version.Build + 1)
+        else
+            make o.Version.Build
+

@@ -38,17 +38,31 @@ module B = IntelliFactory.Build.CommonBuildSetup
 module F = IntelliFactory.Build.FileSystem
 module NG = IntelliFactory.Build.NuGetUtils
 
-let Company = "IntelliFactory"
-let PackageId = "IntelliFactory.Build"
+module Config =
+
+    let PackageId = "IntelliFactory.Build"
+    let AssemblyVersion = Version "0.1"
+    let NuGetVersion = NG.ComputeVersion PackageId (global.NuGet.SemanticVersion AssemblyVersion)
+    let FileVersion = NuGetVersion.Version
+
+    let Company = "IntelliFactory"
+    let Description = "Provides build utilites, in particular API for generating VisualStudio extensibility packages"
+    let LicenseUrl = "http://apache.org/licenses/LICENSE-2.0.html"
+    let Tags = "F# Build FAKE VSTemplate VSIX VisualStudio Extensibility".Split(' ')
+    let Website = "http://bitbucket.org/IntelliFactory/build"
 
 let Metadata =
     let m = B.Metadata.Create()
-    m.Author <- Some Company
-    m.AssemblyVersion <- Some (Version "0.1.0.0")
-    m.FileVersion <- Some (Version "0.1.0.0")
-    m.Description <- Some "Provides build utilites, in particular API for generating VisualStudio extensibility packages"
-    m.Product <- Some PackageId
-    m.Website <- Some "http://bitbucket.org/IntelliFactory/build"
+    m.AssemblyVersion <- Some Config.AssemblyVersion
+    m.Author <- Some Config.Company
+    m.Description <- Some Config.Description
+    m.FileVersion <- Some Config.FileVersion
+    m.Product <- Some Config.PackageId
+    m.VersionSuffix <-
+        match Config.NuGetVersion.SpecialVersion with
+        | null | "" -> None
+        | v -> Some v
+    m.Website <- Some Config.Website
     m
 
 let ReleaseNet40 : B.BuildConfiguration =
@@ -81,16 +95,6 @@ let Solution : B.Solution =
         RootDirectory = Root
     }
 
-let ComputeVersion () =
-    let fv = Metadata.FileVersion.Value
-    match NG.FindLatestOnlineVersion PackageId with
-    | None -> global.NuGet.SemanticVersion.Parse(string fv)
-    | Some v ->
-        let b = v.Version.Build + 1
-        match Metadata.VersionSuffix with
-        | None -> new global.NuGet.SemanticVersion(fv.Major, fv.Minor, b, "")
-        | Some vn -> new global.NuGet.SemanticVersion(fv.Major, fv.Minor, b, vn)
-
 Target "CopyNuGetTargets" <| fun () ->
     let repo = NG.LocalRepository.Create (Root +/ "packages")
     match NG.FindPackage repo "NuGet.Build" with
@@ -108,19 +112,18 @@ Target "CopyNuGetTargets" <| fun () ->
 
 /// TODO: helpers for buliding packages from a solution spec.
 Target "BuildNuGetPackage" <| fun () ->
-    let version = ComputeVersion ()
     let content =
         use out = new MemoryStream()
         let builder = new NuGet.PackageBuilder()
-        builder.Id <- PackageId
-        builder.Version <- version
-        builder.Authors.Add(Company) |> ignore
-        builder.Owners.Add(Company) |> ignore
-        builder.LicenseUrl <- Uri("http://apache.org/licenses/LICENSE-2.0.html")
-        builder.ProjectUrl <- Uri(defaultArg Metadata.Website "")
-        builder.Copyright <- String.Format("Copyright (c) {0} {1}", DateTime.Now.Year, Company)
+        builder.Id <- Config.PackageId
+        builder.Version <- Config.NuGetVersion
+        builder.Authors.Add(Config.Company) |> ignore
+        builder.Owners.Add(Config.Company) |> ignore
+        builder.LicenseUrl <- Uri(Config.LicenseUrl)
+        builder.ProjectUrl <- Uri(Config.Website)
+        builder.Copyright <- String.Format("Copyright (c) {0} {1}", DateTime.Now.Year, Config.Company)
         builder.Description <- defaultArg Metadata.Description ""
-        "F# Build FAKE VSTemplate VSIX VisualStudio Extensibility".Split(' ')
+        Config.Tags
         |> Seq.iter (builder.Tags.Add >> ignore)
         new NuGet.PackageDependencySet(
             B.Net40.ToFrameworkName(),
@@ -130,7 +133,7 @@ Target "BuildNuGetPackage" <| fun () ->
             ])
         |> builder.DependencySets.Add
         for ext in [".xml"; ".dll"] do
-            let n = PackageId
+            let n = Config.PackageId
             builder.Files.Add
                 (
                     let f = new NuGet.PhysicalPackageFile()
@@ -141,7 +144,7 @@ Target "BuildNuGetPackage" <| fun () ->
         builder.Save(out)
         F.Binary.FromBytes (out.ToArray())
         |> F.BinaryContent
-    let out = Root +/ ".build" +/ String.Format("IntelliFactory.Build.{0}.nupkg", version)
+    let out = Root +/ ".build" +/ String.Format("IntelliFactory.Build.{0}.nupkg", Config.NuGetVersion)
     content.WriteFile(out)
     tracefn "Written %s" out
 

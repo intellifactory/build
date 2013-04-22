@@ -15,6 +15,7 @@
 /// Provides some utilities for working with NuGet packages.
 module IntelliFactory.Build.NuGetUtils
 
+open System
 open System.Runtime.Versioning
 open NuGet
 module F = FileSystem
@@ -77,3 +78,10 @@ type Package =
 /// Experimental utility method. Finds the most recent
 /// online version of a package on the default NuGet feed.
 val FindLatestOnlineVersion : packageId: string -> option<SemanticVersion>
+
+/// Experimental utility method. Computes a version with an auto-incremented
+/// build number based on the latest online version of a package.
+val ComputeVersion :
+    packageId: string ->
+    baseVersion: NuGet.SemanticVersion ->
+    NuGet.SemanticVersion
