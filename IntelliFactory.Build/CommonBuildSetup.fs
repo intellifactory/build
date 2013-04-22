@@ -385,13 +385,62 @@ module CommonTargets =
         ]
 
     let GenerateFSharpTargetsXml (lr: NG.LocalRepository) (projects: list<Project>) =
+        let extras =
+            projects
+            |> Seq.collect (fun c -> c.BuildConfigurations)
+            |> Seq.distinctBy (fun c ->
+                (c.ConfigurationName, c.FrameworkVersion.ToFrameworkName().ToString()))
+            |> Seq.collect (fun c ->
+                let cond =
+                    String.Format(" '$(Configuration)|$(Platform)' == '{0}|AnyCPU'",
+                        c.GetName())
+                let extraRefs =
+                    match c.FrameworkVersion with
+                    | Net20 | Net35 ->
+                        [
+                            E "Reference" + ["Include", "FSharp.Core, Version=2.3.0.0, \
+                                Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"] - [
+                                E "Private" -- "False"
+                                E "SpecificVersion" -- "True"
+                            ]
+                        ]
+                    | Net40 | Net45 ->
+                        [
+                            E "Reference" + ["Include", "FSharp.Core, Version=4.3.0.0, \
+                                Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"] - [
+                                E "Private" -- "False"
+                                E "SpecificVersion" -- "True"
+                            ]
+                            E "Reference" + ["Include", "System.Numerics"]
+                        ]
+                [
+                    E "ItemGroup" + [ "Condition", cond ] - extraRefs
+                    E "PropertyGroup" + [ "Condition", cond ] - (
+                        if c.Debug then
+                            [
+                                E "DebugSymbols" -- "true"
+                                E "DebugType" -- "full"
+                                E "Optimize" -- "false"
+                                E "Tailcalls" -- "false"
+                                E "DefineConstants" -- "DEBUG;TRACE"
+                            ]
+                        else
+                            [
+                                E "DebugType" -- "pdbonly"
+                                E "Optimize" -- "true"
+                                E "Tailcalls" -- "true"
+                                E "DefineConstants" -- "TRACE"
+                            ]
+                    )
+                ])
         GenerateProjectXml [
-            E "PropertyGroup" -  GenerateFSharpHomeXml ()
-            E "ItemGroup" - [
+            yield E "PropertyGroup" - GenerateFSharpHomeXml ()
+            yield E "ItemGroup" - [
                 E "Compile" + ["Include", "$(Root)/.build/AutoAssemblyInfo.fs"]
             ]
-            E "Import" + ["Project", "$(MSBuildThisFileDirectory)/Common.targets"]
-            E "Import" + ["Project", "$(FSharpHome)/Microsoft.FSharp.targets"]
+            yield! extras
+            yield E "Import" + ["Project", "$(MSBuildThisFileDirectory)/Common.targets"]
+            yield E "Import" + ["Project", "$(FSharpHome)/Microsoft.FSharp.targets"]
         ]
 
     let Generate (rootDir: string) (projects: list<Project>) =
