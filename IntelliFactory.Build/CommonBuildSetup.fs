@@ -337,20 +337,50 @@ module CommonTargets =
             )
         )
 
+    let GetImportedTargets (c: BuildConfiguration) (lr: NG.LocalRepository) (p: Project) : seq<string> =
+        lr.Repository.GetPackages()
+        |> Seq.filter (IsPackageRequired p c)
+        |> NG.MostRecent
+        |> Seq.collect (fun proj ->
+            let dir =
+                lr.Path +/
+                lr.PathResolver.GetPackageDirectory(proj) +/
+                "msbuild" +/
+                c.FrameworkVersion.GetNuGetLiteral()
+            if Directory.Exists(dir) then
+                Directory.EnumerateFiles(dir, "*.targets", SearchOption.AllDirectories)
+                |> Seq.map (fun file ->
+                    let prefix = lr.Path.Length
+                    String.Format("$(Root)/packages/{0}", file.Substring(prefix)))
+            else
+                Seq.empty)
+
     let GenerateCommonTargetsXml (lr: NG.LocalRepository) (projects: list<Project>) =
+        let attrs (p: Project) (c: BuildConfiguration) =
+            [
+                "Condition",
+                    (Var "Configuration" ==. c.GetName())
+                    &&. (Var "Name" ==. p.Name)
+            ]
         let includes =
             [
                 for p in projects do
                     match p.MSBuildProjectFilePath with
                     | Some pp ->
                         for c in p.BuildConfigurations do
-                            let attrs =
-                                [
-                                    "Condition",
-                                        (Var "Configuration" ==. c.GetName())
-                                        &&. (Var "Name" ==. p.Name)
-                                ]
+                            let attrs = attrs p c
                             yield E "ItemGroup" + attrs - GetReferencesXml lr p c
+                    | None -> ()
+            ]
+        let extraTargets =
+            [
+                for p in projects do
+                    match p.MSBuildProjectFilePath with
+                    | Some pp ->
+                        for c in p.BuildConfigurations do
+                            let attrs = attrs p c
+                            for t in GetImportedTargets c lr p do
+                                yield E "Import" + (("Project", t) :: attrs)
                     | None -> ()
             ]
         let content =
@@ -366,7 +396,14 @@ module CommonTargets =
                 Prop "WarningLevel" "3"
             ]
             :: List.ofSeq (GenerateConfigurationsXml projects)
-        GenerateProjectXml (content @ includes)
+        let fsharpImports =
+            [
+                E "Import" + [
+                    "Project", "$(FSharpHome)/Microsoft.FSharp.targets"
+                    "Condition", " '$(ImportFSharpTargets)' != '' "
+                ]
+            ]
+        GenerateProjectXml (content @ includes @ fsharpImports @ extraTargets)
 
     let GenerateFSharpHomeXml () =
         let h1 = "FSharpHome1"
@@ -439,8 +476,8 @@ module CommonTargets =
                 E "Compile" + ["Include", "$(Root)/.build/AutoAssemblyInfo.fs"]
             ]
             yield! extras
+            yield E "PropertyGroup" - [E "ImportFSharpTargets" -- "True"]
             yield E "Import" + ["Project", "$(MSBuildThisFileDirectory)/Common.targets"]
-            yield E "Import" + ["Project", "$(FSharpHome)/Microsoft.FSharp.targets"]
         ]
 
     let Generate (rootDir: string) (projects: list<Project>) =
