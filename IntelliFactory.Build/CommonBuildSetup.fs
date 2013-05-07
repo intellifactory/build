@@ -525,7 +525,8 @@ module Preparation =
 
 let Prepare (trace: string -> unit) (solutionDir: string) =
     let targets = solutionDir +/ ".build" +/ "NuGet.targets"
-    if File.Exists targets then
+    let buildingSelf = File.Exists targets
+    if buildingSelf then
         let nugetTargets = F.Content.ReadTextFile targets
         trace "Writing Build/NuGet.targets"
         nugetTargets.WriteFile(solutionDir +/ "Build" +/ "NuGet.targets")
