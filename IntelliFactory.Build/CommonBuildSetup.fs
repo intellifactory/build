@@ -110,17 +110,21 @@ module AssemblyInfo =
             out.WriteLine("do ()")
         out.ToString()
 
-    let Generate (root: string) (meta: Metadata) =
+    let Generate (prefix: option<string>) (root: string) (meta: Metadata) =
         let tag = M.InferTag root
         let settings : Settings =
             {
                 Metadata = meta
                 Tag = tag
             }
+        let dir =
+            match prefix with
+            | None -> root +/ ".build"
+            | Some p -> root +/ ".build" +/ p
         let t1 = GenerateAssemblyInfoText FSharpFlavor settings
-        (F.TextContent t1).WriteFile(root +/ ".build" +/ "AutoAssemblyInfo.fs")
+        (F.TextContent t1).WriteFile(dir +/ "AutoAssemblyInfo.fs")
         let t2 = GenerateAssemblyInfoText CSharpFlavor settings
-        (F.TextContent t2).WriteFile(root +/ ".build" +/ "AutoAssemblyInfo.cs")
+        (F.TextContent t2).WriteFile(dir +/ "AutoAssemblyInfo.cs")
 
 type FrameworkVersion =
     | Net20
@@ -284,7 +288,6 @@ module CommonTargets =
                 match ref.AssemblyPath with
                 | Some path ->
                     yield E "HintPath" -- path
-                    yield E "Private" -- "true"
                 | None -> ()
             ])
 
@@ -349,9 +352,6 @@ module CommonTargets =
                 c.FrameworkVersion.GetNuGetLiteral()
             if Directory.Exists(dir) then
                 Directory.EnumerateFiles(dir, "*.targets", SearchOption.AllDirectories)
-                |> Seq.map (fun file ->
-                    let prefix = lr.Path.Length
-                    String.Format("$(Root)/packages/{0}", file.Substring(prefix)))
             else
                 Seq.empty)
 
@@ -385,7 +385,6 @@ module CommonTargets =
             ]
         let content =
             E "PropertyGroup" - [
-                Prop "Root" "$(MSBuildThisFileDirectory)/.."
                 Prop "TargetFrameworkVersion" "v4.0"
                 Prop "Platform" "AnyCPU"
                 Prop "Configuration" "Release-$(TargetFrameworkVersion)"
@@ -412,7 +411,6 @@ module CommonTargets =
         let h = "FSharpHome"
         let setFH hx = E h  + ["Condition", Exists (Var hx) &&. (Var h ==. "")] -- Var hx
         [
-            Prop "Root" "$(MSBuildThisFileDirectory)/.."
             E h1 -- "$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0"
             E h2 -- "$(MSBuildExtensionsPath32)/../Microsoft F#/v4.0"
             E h3 -- "$(MSBuildExtensionsPath32)/FSharp/1.0"
@@ -473,15 +471,18 @@ module CommonTargets =
         GenerateProjectXml [
             yield E "PropertyGroup" - GenerateFSharpHomeXml ()
             yield E "ItemGroup" - [
-                E "Compile" + ["Include", "$(Root)/.build/AutoAssemblyInfo.fs"]
+                E "Compile" + ["Include", "$(MSBuildThisFileDirectory)/AutoAssemblyInfo.fs"]
             ]
             yield! extras
             yield E "PropertyGroup" - [E "ImportFSharpTargets" -- "True"]
             yield E "Import" + ["Project", "$(MSBuildThisFileDirectory)/Common.targets"]
         ]
 
-    let Generate (rootDir: string) (projects: list<Project>) =
-        let buildDir = rootDir +/ ".build"
+    let Generate (prefix: option<string>) (rootDir: string) (projects: list<Project>) =
+        let buildDir =
+            match prefix with
+            | None -> rootDir +/ ".build"
+            | Some p -> rootDir +/ ".build" +/ p
         let commonTargets = buildDir +/ "Common.targets"
         let fsharpTargets = buildDir +/ "FSharp.targets"
         let packagesDir = rootDir +/ "packages"
@@ -493,17 +494,18 @@ module CommonTargets =
         gen GenerateCommonTargetsXml commonTargets
         gen GenerateFSharpTargetsXml fsharpTargets
 
-type Solution =
-    {
-        Metadata : Metadata
-        Projects : list<Project>
-        RootDirectory : string
-    }
+[<Sealed>]
+type Solution(rootDir: string) =
+
+    member val Metadata = Metadata.Create() with get, set
+    member val Prefix : option<string> = None with get, set
+    member val Projects : list<Project> = [] with get, set
+    member this.RootDirectory = rootDir
 
     member this.MSBuild(?options: MSBuildOptions) : Async<unit> =
         async {
-            do CommonTargets.Generate this.RootDirectory this.Projects
-            do AssemblyInfo.Generate this.RootDirectory this.Metadata
+            do CommonTargets.Generate this.Prefix rootDir this.Projects
+            do AssemblyInfo.Generate this.Prefix rootDir this.Metadata
             let options = defaultArg options MSBuildOptions.Default
             return! MSBuildRunner.RunMSBuild [
                 for p in this.Projects do

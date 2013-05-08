@@ -97,16 +97,26 @@ type Metadata =
     static member Create : unit -> Metadata
 
 /// Represents a solution to build.
+[<Sealed>]
 type Solution =
-    {
-        Metadata : Metadata
-        Projects : list<Project>
-        RootDirectory : string
-    }
+
+    /// Constructs a solution representation.
+    new : rootDir: string -> Solution
 
     /// Builds the solution with in-process MSBuild.
     member MSBuild : ?options: MSBuildOptions -> Async<unit>
 
+    /// The solution metadata.
+    member Metadata : Metadata with get, set
+
+    /// A unique prefix to distinguish multiple solutions.
+    member Prefix : option<string> with get, set
+
+    /// The projects to build within the solution.
+    member Projects : list<Project> with get, set
+
+    /// The root directory as passed to the constructor.
+    member RootDirectory : string
 
 /// Generates boostrapping MSBuild boilerplate in a given folder.
 val Prepare : trace: (string -> unit) -> solutionDir: string -> unit

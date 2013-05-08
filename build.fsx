@@ -88,12 +88,8 @@ let Project : B.Project =
         MSBuildProjectFilePath = Some (Root +/ name +/ (name + ".fsproj"))
     }
 
-let Solution : B.Solution =
-    {
-        Metadata = Metadata
-        Projects = [Project]
-        RootDirectory = Root
-    }
+let Solution =
+    B.Solution(Root, Projects = [Project], Metadata = Metadata)
 
 Target "CopyNuGetTargets" <| fun () ->
     let repo = NG.LocalRepository.Create (Root +/ "packages")
