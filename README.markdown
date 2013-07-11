@@ -1,43 +1,65 @@
 # IntelliFactory.Build
 
-`IntelliFactory.Build` provides common utilities we need for building
-F# software. In particular, it provides F# API to:
+Cross-platform and sandbox-friendly build automation library with
+specials support for building [F#](http://fsharp.org) and
+[WebSharper](http://websharper.com) projects consuming and publishing
+[NuGet](http://nuget.org) packages.
 
-* Build VisualStudio VSTemplate packages
+## Links
 
-* Build VisualStudio VSIX packages
-
-It works best with FAKE - the F# Make.
+  * [Bitbucket repository - Mercurial](http://bitbucket.org/IntelliFactory/build)
+  * [GitHub repository - Git] (http://github.com/intellifactory/build)
+  * [Issue Tracker] (http://bitbucket.org/IntelliFactory/build/issues)
 
 ## Copying
 
 Code is available under Apache 2.0 license, see LICENSE.txt in source.
 
-## Installation
+## Synopsis
 
-Consider using the binaries hosted on the public NuGet repository with
-package name `IntelliFactory.Build`.
+Create a `build.fsx`:
 
-Source is available on
-[Bitbucket](http://bitbucket.org/IntelliFactory/build).
+    #r "IntelliFactory.Build.dll"
+    open IntelliFactory.Build
 
-For Git users there is also a [Github
-mirror](http://github.com/intellifactory/build).
+    let b = BuildTool().PackageId("MyPackage", "0.1")
+
+    b.Solution [
+        b.FSharp.Library("A")
+            .Modules(["M1", "M2", "M3"])
+            .References(fun rt ->
+                [
+                    rt.Assembly("System.Xml")
+                    rt.NuGet("DotNetZip").Reference()
+                ])
+    ]
+    |> b.Dispatch
+
+With this in place, `fsi --exec build.fsx` and `fsi --exec build.fsx
+--clean` will build or clean a library consisting of `A/M1.fs`,
+`A/M2.fs`, `A/M3.fs`, targeting .NET Framework 4.5.
+
+## Contributing
+
+Contributions are welcome.  The library is designed to be easily
+parameterizable (see `Parameters.fsi`), so if some rules are too
+hard-wired for your use case, feel free to make them parametric and
+send a pull request on either GitHub or Bitbucket.
+
+## Status
+
+Current development focus is on providing ease of use, ability to run
+in partial trust, and Mono support.  Previously NuGet-released version
+0.1 supported more features - these are to be re-introduced, currently
+they conflict with the partial trust requirement.
 
 ## Building
 
-Invoke `Build.cmd` in the root directory of the checkout.
+Invoke `build.cmd` in the root directory of the checkout.
 
-If you have a recent FAKE, you can also invoke `fake boot auto`.
-
-## Documentation
-
-Coming.  For now, please consult F# signature files in source.
-
-## Bugs
-
-Please report bugs and request features using the [Bitbucket
-tracker](http://bitbucket.org/IntelliFactory/build/issues).
+On Mono, invoke `bash build.sh`.  You might need to configure
+`MonoHome`, `NuGetHome` and `FSharpHome` environment variables.
+Tested on Mono 3.0.8, Arch Linux.
 
 ## Contact
 
