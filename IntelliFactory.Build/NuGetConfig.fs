@@ -121,6 +121,35 @@ type NuGetLogger(env) =
             | MessageLevel.Info -> log.Info msg
             | _ -> log.Warn msg
 
+[<Sealed>]
+[<SecurityCritical>]
+type NuGetPackageSourceProviderWrapper(psp: IPackageSourceProvider) =
+
+    interface IPackageSourceProvider with
+
+        [<SecurityCritical>]
+        member p.IsPackageSourceEnabled(s) =
+            s.IsOfficial || psp.IsPackageSourceEnabled(s)
+
+        [<SecurityCritical>]
+        member p.DisablePackageSource(s) =
+            if not s.IsOfficial then
+                psp.DisablePackageSource s
+
+        [<SecurityCritical>]
+        member p.LoadPackageSources() =
+            let ss = psp.LoadPackageSources()
+            if Seq.isEmpty ss then
+                let s = PackageSource("https://nuget.org/api/v2/")
+                s.IsEnabled <- true
+                s.IsOfficial <- true
+                Seq.singleton s
+            else ss
+
+        [<SecurityCritical>]
+        member p.SavePackageSources(ss) =
+            psp.SavePackageSources(ss)
+
 [<AutoOpen>]
 module NuGetConfigTools =
 
@@ -160,7 +189,7 @@ module NuGetConfigTools =
         let cs = currentSettings.Find env :?> option<NuGet.ISettings>
         match cs with
         | Some settings ->
-            let psp = PackageSourceProvider(settings)
+            let psp = NuGetPackageSourceProviderWrapper(PackageSourceProvider(settings))
             let cp = SettingsCredentialProvider(NullCredentialProvider.Instance, psp)
             let pspBox = box psp
             let cpBox = box cp
