@@ -116,12 +116,15 @@ type NuGetPackageBuilder(cfg: NuGetPackageConfig, env) =
         let out = BuildConfig.BuildDir.Find env
         let ver = SafeNuGetSemanticVersion(fvn, ?suffix = vn.Suffix)
         let path = Path.Combine(out, String.Format("{0}.{1}.nupkg", pid, ver))
+        let log = Log.Create<NuGetPackageBuilder>(env)
         let cfg =
             {
                 authors =
                     match comp with
                     | Some comp -> [comp.Name]
-                    | None -> []
+                    | None ->
+                        log.Warn("Building NuGet package {0} requires the Authors field - assumed 'Unknown'", pid)
+                        ["Unknown"]
                 contents = []
                 description = pid
                 id = pid
