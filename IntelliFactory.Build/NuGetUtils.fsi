@@ -15,49 +15,49 @@
 /// Provides some utilities for working with NuGet packages.
 module IntelliFactory.Build.NuGetUtils
 
-open System
-open System.Runtime.Versioning
-open NuGet
+//open System
+//open System.Runtime.Versioning
+//open NuGet
 module F = FileSystem
-
-/// Encapsulates a local package repository.
-[<Sealed>]
-type LocalRepository =
-
-    /// The path passed to constructor.
-    member Path : string
-
-    /// Resolver for package paths.
-    member PathResolver : IPackagePathResolver
-
-    /// The repository object.
-    member Repository : LocalPackageRepository
-
-    /// Constructor based on the full path to `packages` folder.
-    static member Create : path: string -> LocalRepository
-
-/// Filters NuGet packages to only include latest available versions.
-val MostRecent : pkgs: seq<IPackage> -> seq<IPackage>
-
-/// Represents an assembly reference.
-type AssemblyReference =
-    {
-        AssemblyName : string
-        AssemblyPath : option<string>
-    }
-
-/// Computes transitive assembly references using NuGet.
-val ComputeReferences :
-    framework: FrameworkName ->
-    isRequired: (IPackage -> bool) ->
-    repository: LocalRepository ->
-    seq<AssemblyReference>
-
-/// Finds a local package by ID.
-val FindPackage :
-    repository : LocalRepository ->
-    id: string ->
-    option<IPackage>
+//
+///// Encapsulates a local package repository.
+//[<Sealed>]
+//type LocalRepository =
+//
+//    /// The path passed to constructor.
+//    member Path : string
+//
+//    /// Resolver for package paths.
+//    member PathResolver : IPackagePathResolver
+//
+//    /// The repository object.
+//    member Repository : LocalPackageRepository
+//
+//    /// Constructor based on the full path to `packages` folder.
+//    static member Create : path: string -> LocalRepository
+//
+///// Filters NuGet packages to only include latest available versions.
+//val MostRecent : pkgs: seq<IPackage> -> seq<IPackage>
+//
+///// Represents an assembly reference.
+//type AssemblyReference =
+//    {
+//        AssemblyName : string
+//        AssemblyPath : option<string>
+//    }
+//
+///// Computes transitive assembly references using NuGet.
+//val ComputeReferences :
+//    framework: FrameworkName ->
+//    isRequired: (IPackage -> bool) ->
+//    repository: LocalRepository ->
+//    seq<AssemblyReference>
+//
+///// Finds a local package by ID.
+//val FindPackage :
+//    repository : LocalRepository ->
+//    id: string ->
+//    option<IPackage>
 
 /// Represents local (in-memory) NuGet packages.
 type Package =
@@ -71,17 +71,17 @@ type Package =
         /// The version of the NuGet package.
         mutable Version : string
     }
-
-    /// Loads a nupkg file.
-    static member FromFile : file: string -> Package
-
-/// Experimental utility method. Finds the most recent
-/// online version of a package on the default NuGet feed.
-val FindLatestOnlineVersion : packageId: string -> option<SemanticVersion>
-
-/// Experimental utility method. Computes a version with an auto-incremented
-/// build number based on the latest online version of a package.
-val ComputeVersion :
-    packageId: string ->
-    baseVersion: NuGet.SemanticVersion ->
-    NuGet.SemanticVersion
+//
+//    /// Loads a nupkg file.
+//    static member FromFile : file: string -> Package
+//
+///// Experimental utility method. Finds the most recent
+///// online version of a package on the default NuGet feed.
+//val FindLatestOnlineVersion : packageId: string -> option<SemanticVersion>
+//
+///// Experimental utility method. Computes a version with an auto-incremented
+///// build number based on the latest online version of a package.
+//val ComputeVersion :
+//    packageId: string ->
+//    baseVersion: NuGet.SemanticVersion ->
+//    NuGet.SemanticVersion

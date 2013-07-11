@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>6af3b6cd-0373-4b08-abf3-d74355f592b0</ProjectGuid>
-    <OutputType>Library</OutputType>
     <Name>IntelliFactory.Build</Name>
+    <OutputPath>bin</OutputPath>
+    <PrivateRefs>False</PrivateRefs>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
-  <Import Project="..\.build\FSharp.targets" />
   <ItemGroup>
     <Compile Include="FileSystem.fsi" />
     <Compile Include="FileSystem.fs" />
@@ -23,23 +23,43 @@
     <Compile Include="Mercurial.fs" />
     <Compile Include="CommonBuildSetup.fsi" />
     <Compile Include="CommonBuildSetup.fs" />
-    <EmbeddedResource Include="../.build/NuGet.targets">
-      <Link>NuGet.targets</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="../Build.proj">
-      <Link>Build.proj</Link>
-    </EmbeddedResource>
-    <EmbeddedResource Include="../Build.cmd">
-      <Link>Build.cmd</Link>
-    </EmbeddedResource>
+    <Compile Include="Parameters.fsi" />
+    <Compile Include="Parameters.fs" />
+    <Compile Include="Logging.fsi" />
+    <Compile Include="Logging.fs" />
+    <Compile Include="Frameworks.fsi" />
+    <Compile Include="Frameworks.fs" />
+    <Compile Include="Utilities.fs" />
+    <Compile Include="Company.fsi" />
+    <Compile Include="Company.fs" />
+    <Compile Include="SafeNuGet.fsi" />
+    <Compile Include="SafeNuGet.fs" />
+    <Compile Include="NuGetConfig.fsi" />
+    <Compile Include="NuGetConfig.fs" />
+    <Compile Include="BuildConfig.fsi" />
+    <Compile Include="BuildConfig.fs" />
+    <Compile Include="Package.fsi" />
+    <Compile Include="Package.fs" />
+    <Compile Include="AssemblyInfo.fsi" />
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="References.fsi" />
+    <Compile Include="References.fs" />
+    <Compile Include="Solutions.fsi" />
+    <Compile Include="Solutions.fs" />
+    <Compile Include="FSharp.fsi" />
+    <Compile Include="FSharp.fs" />
+    <Compile Include="NuGetPackage.fsi" />
+    <Compile Include="NuGetPackage.fs" />
+    <Compile Include="BuildTool.fs" />
+    <Compile Include="FSharpInteractiveTask.fs" />
+    <Compile Include="Annotations.fs" />
   </ItemGroup>
-  <ItemGroup>
-    <Reference Include="mscorlib" />
-    <Reference Include="System" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="Microsoft.Build" />
-    <Reference Include="Microsoft.Build.Engine" />
-    <Reference Include="Microsoft.Build.Framework" />
-  </ItemGroup>
+  <Import Project="../build/net40/$(Name).proj" />
+  <Import Project="$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0/Microsoft.FSharp.targets" />
+  <Target Name="Build">
+    <Exec Command="build.cmd" WorkingDirectory=".." />
+  </Target>
+  <Target Name="Clean">
+    <Exec Command="build.cmd --clean" WorkingDirectory=".." />
+  </Target>
 </Project>

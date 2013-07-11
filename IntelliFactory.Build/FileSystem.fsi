@@ -59,3 +59,10 @@ type Content =
 
     /// Reads a text file.
     static member ReadTextFile : fullPath: string -> Content
+
+/// Alternative to `File.Exists` that fails with an exception when
+/// partial trust prevents the actual test.
+val internal FileExists : path: string -> bool
+
+/// Same for directories.
+val internal DirExists : path: string -> bool

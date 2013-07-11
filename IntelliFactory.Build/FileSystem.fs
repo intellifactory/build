@@ -20,22 +20,28 @@ open System.Text
 let DefaultEncoding =
     UTF8Encoding(false) :> Encoding
 
+let FileExists (file: string) =
+    FileInfo(file).Exists
+
+let DirExists (path: string) =
+    DirectoryInfo(path).Exists
+
 let PrepareFileForWriting (fullPath: string) : unit =
     let d = Path.GetDirectoryName fullPath
-    if not (Directory.Exists d) then
+    if not (DirExists d) then
         ignore (Directory.CreateDirectory d)
 
 let EnsureBinaryFile (fullPath: string) (contents: byte []) : unit =
     PrepareFileForWriting fullPath
     let inline def () = File.WriteAllBytes(fullPath, contents)
-    if File.Exists fullPath
+    if FileExists fullPath
         then if File.ReadAllBytes fullPath <> contents then def ()
         else def ()
 
 let EnsureTextFile (fullPath: string) (contents: string) : unit =
     PrepareFileForWriting fullPath
     let inline def () = File.WriteAllText(fullPath, contents, DefaultEncoding)
-    if File.Exists fullPath
+    if FileExists fullPath
         then if File.ReadAllText fullPath <> contents then def ()
         else def ()
 

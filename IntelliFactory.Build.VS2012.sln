@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Root", "Root", "{0CA19F83-5685-4269-ACA5-D8D046494C4B}"
 	ProjectSection(SolutionItems) = preProject
-		Build.cmd = Build.cmd
+		build.cmd = build.cmd
 		build.fsx = build.fsx
-		Build.proj = Build.proj
+		build.sh = build.sh
 		LICENSE.txt = LICENSE.txt
 		README.markdown = README.markdown
 	EndProjectSection
@@ -14,14 +14,20 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "IntelliFactory.Build", "Int
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
 		Debug-v4.0|Any CPU = Debug-v4.0|Any CPU
+		Release|Any CPU = Release|Any CPU
 		Release-v4.0|Any CPU = Release-v4.0|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Debug-v4.0|Any CPU.ActiveCfg = Release-v4.0|Any CPU
-		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Debug-v4.0|Any CPU.Build.0 = Release-v4.0|Any CPU
-		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Release-v4.0|Any CPU.ActiveCfg = Release-v4.0|Any CPU
-		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Release-v4.0|Any CPU.Build.0 = Release-v4.0|Any CPU
+		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Debug-v4.0|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Debug-v4.0|Any CPU.Build.0 = Debug|Any CPU
+		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Release-v4.0|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AF3B6CD-0373-4B08-ABF3-D74355F592B0}.Release-v4.0|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

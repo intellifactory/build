@@ -15,29 +15,29 @@
 /// Declares common types for VSIX VisualStudio extensions and VSTemplate packages.
 module IntelliFactory.Build.VsixPackages
 
-open System
-open System.Xml
-open System.Xml.Linq
-open Ionic.Zip
-module F = FileSystem
-
-/// Uniquely identifies extension packages.
-type Identity =
-    {
-        /// The unique GUID to disambiguate.
-        mutable Guid : Guid
-
-        /// The human-readable identifier.
-        mutable Id : string
-    }
-
-    /// Constructs the full disambiguated identifier.
-    member this.GetFullId() =
-        String.Format("{0}.{1}", this.Id, this.Guid)
-
-    override this.ToString() =
-        this.GetFullId()
-
-    /// Constructs a new instance.
-    static member Create id guid =
-        { Id = id; Guid = guid }
+//open System
+//open System.Xml
+//open System.Xml.Linq
+//open Ionic.Zip
+//module F = FileSystem
+//
+///// Uniquely identifies extension packages.
+//type Identity =
+//    {
+//        /// The unique GUID to disambiguate.
+//        mutable Guid : Guid
+//
+//        /// The human-readable identifier.
+//        mutable Id : string
+//    }
+//
+//    /// Constructs the full disambiguated identifier.
+//    member this.GetFullId() =
+//        String.Format("{0}.{1}", this.Id, this.Guid)
+//
+//    override this.ToString() =
+//        this.GetFullId()
+//
+//    /// Constructs a new instance.
+//    static member Create id guid =
+//        { Id = id; Guid = guid }
