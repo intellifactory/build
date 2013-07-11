@@ -1,15 +1,15 @@
 # IntelliFactory.Build
 
 Cross-platform and sandbox-friendly build automation library with
-specials support for building [F#](http://fsharp.org) and
+special support for building [F#](http://fsharp.org) and
 [WebSharper](http://websharper.com) projects consuming and publishing
 [NuGet](http://nuget.org) packages.
 
 ## Links
 
   * [Bitbucket repository - Mercurial](http://bitbucket.org/IntelliFactory/build)
-  * [GitHub repository - Git] (http://github.com/intellifactory/build)
-  * [Issue Tracker] (http://bitbucket.org/IntelliFactory/build/issues)
+  * [GitHub repository - Git](http://github.com/intellifactory/build)
+  * [Issue tracker](http://bitbucket.org/IntelliFactory/build/issues)
 
 ## Copying
 
