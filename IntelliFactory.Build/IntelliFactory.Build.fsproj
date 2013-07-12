@@ -7,6 +7,14 @@
     <PrivateRefs>False</PrivateRefs>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
+  <Import Project="../build/net40/$(Name).proj" />
+  <Import Project="$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0/Microsoft.FSharp.targets" />
+  <Target Name="Build">
+    <Exec Command="build.cmd" WorkingDirectory=".." />
+  </Target>
+  <Target Name="Clean">
+    <Exec Command="build.cmd --clean" WorkingDirectory=".." />
+  </Target>
   <ItemGroup>
     <Compile Include="FileSystem.fsi" />
     <Compile Include="FileSystem.fs" />
@@ -54,12 +62,4 @@
     <Compile Include="FSharpInteractiveTask.fs" />
     <Compile Include="Annotations.fs" />
   </ItemGroup>
-  <Import Project="../build/net40/$(Name).proj" />
-  <Import Project="$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0/Microsoft.FSharp.targets" />
-  <Target Name="Build">
-    <Exec Command="build.cmd" WorkingDirectory=".." />
-  </Target>
-  <Target Name="Clean">
-    <Exec Command="build.cmd --clean" WorkingDirectory=".." />
-  </Target>
 </Project>
