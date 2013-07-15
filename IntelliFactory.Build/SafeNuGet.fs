@@ -24,7 +24,14 @@ type SafeNuGetSemanticVersion(sv: SemanticVersion) =
         SafeNuGetSemanticVersion(sv)
 
     member v.SemanticVersion = sv
-    member v.Version = sv.Version
+
+    member v.Version =
+        let maj = sv.Version.Major
+        let min = sv.Version.Minor
+        match sv.Version.Build, sv.Version.Revision with
+        | b, r when b <= 0 && r <= 0 -> Version(maj, min)
+        | b, r when r <= 0 -> Version(maj, min, b)
+        | b, r -> Version(maj, min, b, r)
 
     member v.SpecialVersion =
         match sv.SpecialVersion with

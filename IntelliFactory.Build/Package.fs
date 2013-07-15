@@ -51,6 +51,9 @@ type PackageVersionTool(env) =
         let min = max 0 orig.Version.Minor
         SV(ver maj min rev, ?suffix = orig.SpecialVersion)
 
+    let getBuild (v: SV) =
+        max 0 v.Version.Build
+
     let pickVersion (all: SV[]) (orig: SV) =
         let o = orig.Version
         let versionWithMaxN3 =
@@ -59,10 +62,10 @@ type PackageVersionTool(env) =
                 v.Version.Major = o.Major
                 && v.Version.Minor = o.Minor)
             |> Seq.append [orig]
-            |> Seq.maxBy (fun s -> s.Version.Build)
+            |> Seq.maxBy getBuild
         let n3 =
-            let r = versionWithMaxN3.Version.Build
-            if r = orig.Version.Build then r else r + 1
+            let r = getBuild versionWithMaxN3
+            if r = getBuild orig then r + 1 else r
         revise n3 orig
 
     member t.PickFreshPackageVersion(pid, v) =

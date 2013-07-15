@@ -114,9 +114,9 @@ type NuGetPackageBuilder(cfg: NuGetPackageConfig, env) =
         let vn = PackageVersion.Current.Find env
         let fvn = PackageVersion.Full.Find env
         let out = BuildConfig.BuildDir.Find env
+        let log = Log.Create<NuGetPackageBuilder>(env)
         let ver = SafeNuGetSemanticVersion(fvn, ?suffix = vn.Suffix)
         let path = Path.Combine(out, String.Format("{0}.{1}.nupkg", pid, ver))
-        let log = Log.Create<NuGetPackageBuilder>(env)
         let cfg =
             {
                 authors =

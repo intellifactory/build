@@ -127,7 +127,7 @@ module AssemblyInfoGeneration =
 
     let t<'T> = typeof<'T>
 
-    let gen s d =
+    let gen (fwt: Frameworks) s d =
         use o = new StringWriter()
 
         if s = FSharpSyntax then
@@ -138,7 +138,11 @@ module AssemblyInfoGeneration =
 
         guid t<GuidAttribute> o s d.Guid
 
-        fw t<TargetFrameworkAttribute> o s d.TargetFramework
+        match d.TargetFramework with
+        | Some f ->
+            if f.Version >= Version "4.0" then
+                fw t<TargetFrameworkAttribute> o s d.TargetFramework
+        | _ -> ()
 
         str t<AssemblyCompanyAttribute> o s d.Company
         str t<AssemblyConfigurationAttribute> o s d.Configuration
@@ -161,8 +165,9 @@ module AssemblyInfoGeneration =
 [<Sealed>]
 type AssemblyInfoGenerator(env) =
     static let current = Parameter.Define(fun env -> AssemblyInfoGenerator(env))
+    let fwt = Frameworks.Current.Find env
 
     member g.Generate(s, d, outFile: string) =
-        FS.TextContent(gen s d).WriteFile(outFile)
+        FS.TextContent(gen fwt s d).WriteFile(outFile)
 
     static member Current = current
