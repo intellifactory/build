@@ -7,13 +7,6 @@ open System.IO
 open IntelliFactory.Build
 #endif
 
-type IProject =
-    abstract Build : ResolvedReferences -> unit
-    abstract Clean : unit -> unit
-    abstract Name : string
-    abstract Framework : Framework
-    abstract References : seq<Reference>
-
 type Solution =
     {
         env : Parameters
@@ -31,8 +24,11 @@ type Solution =
                 |> rt.Resolve fw)
         let log = Log.Create<Solution> s.env
         for p in s.projects do
+            let rs =
+                refs p.Framework
+                |> rt.ResolveProjectReferences p.References
             log.Info("Building {0} for {1}", p.Name, p.Framework.Name)
-            p.Build(refs p.Framework)
+            p.Build(rs)
 
     member s.Clean() =
         for p in s.projects do

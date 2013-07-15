@@ -25,6 +25,9 @@ open System.Security
 open IntelliFactory.Build
 #endif
 
+type PackageSet =
+    Dictionary<string,SafeNuGetPackage>
+
 type PackageReference =
     {
         id : string
@@ -58,7 +61,31 @@ type NuGetReference =
 and Reference =
     | FileRef of string
     | NuGetRef of NuGetReference
+    | ProjectRef of IProject
     | SystemRef of string
+
+and IProject =
+    abstract Build : ResolvedReferences -> unit
+    abstract Clean : unit -> unit
+    abstract Framework : Framework
+    abstract GeneratedAssemblyFiles : seq<string>
+    abstract Name : string
+    abstract References : seq<Reference>
+
+and ResolvedReferences =
+    {
+        pack : PackageSet
+        refs : seq<string>
+    }
+
+    member this.Paths = this.refs
+    member this.WithReferences(refs) = { this with refs = refs }
+
+    static member Empty =
+        {
+            pack = Dictionary()
+            refs = Seq.empty
+        }
 
 [<Sealed>]
 type ReferenceBuilder private (env: Parameters) =
@@ -81,6 +108,9 @@ type ReferenceBuilder private (env: Parameters) =
                 }
             path = None
         }
+
+    member b.Project p =
+        ProjectRef p
 
     static member Current = current
 
@@ -169,24 +199,6 @@ module AssemblySets =
         files
         |> Seq.distinctBy (fun f -> AssemblyName.GetAssemblyName f |> string)
         |> Reify
-
-type PackageSet =
-    Dictionary<string,SafeNuGetPackage>
-
-type ResolvedReferences =
-    {
-        pack : PackageSet
-        refs : seq<string>
-    }
-
-    member this.Paths = this.refs
-    member this.WithReferences(refs) = { this with refs = refs }
-
-    static member Empty =
-        {
-            pack = Dictionary()
-            refs = Seq.empty
-        }
 
 [<Sealed>]
 type NuGetManager =
@@ -448,6 +460,8 @@ type References private (env: Parameters) =
                     | NuGetRef _ -> ()
                     | FileRef p ->
                         yield p
+                    | ProjectRef _ ->
+                        ()
                     | SystemRef r ->
                         match srt.Resolve fw (AssemblyName r) with
                         | None -> ()
@@ -455,6 +469,17 @@ type References private (env: Parameters) =
             |])
         |> buildAssemblySet
         |> nSet.WithReferences
+
+    member rs.ResolveProjectReferences refs (rr: ResolvedReferences) =
+        seq {
+            for r in refs do
+                match r with
+                | ProjectRef p -> yield! p.GeneratedAssemblyFiles
+                | _ -> ()
+        }
+        |> Seq.append rr.Paths
+        |> buildAssemblySet
+        |> rr.WithReferences
 
     static member Current = current
 

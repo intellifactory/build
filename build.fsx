@@ -16,10 +16,11 @@ open NuGet
 #load "IntelliFactory.Build/Logging.fs"
 #load "IntelliFactory.Build/Frameworks.fs"
 #load "IntelliFactory.Build/Utilities.fs"
+#load "IntelliFactory.Build/Interfaces.fs"
 #load "IntelliFactory.Build/Company.fs"
 #load "IntelliFactory.Build/SafeNuGet.fs"
-#load "IntelliFactory.Build/NuGetConfig.fs"
 #load "IntelliFactory.Build/BuildConfig.fs"
+#load "IntelliFactory.Build/NuGetConfig.fs"
 #load "IntelliFactory.Build/Package.fs"
 #load "IntelliFactory.Build/AssemblyInfo.fs"
 #load "IntelliFactory.Build/References.fs"
@@ -34,6 +35,7 @@ let bt =
     BuildTool()
         .PackageId("IntelliFactory.Build", "0.2")
         .Configure(fun bt -> bt.WithFramework(bt.Framework.Net40))
+        .WithCommandLineArgs()
 
 let buildLib =
     bt.FSharp.Library("IntelliFactory.Build")

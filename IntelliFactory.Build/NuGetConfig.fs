@@ -213,6 +213,12 @@ module NuGetConfigTools =
     let manager =
         Parameter.Define makePackageManager
 
+    let packageOutputPath =
+        Parameter.Define(fun env ->
+            match Environment.GetEnvironmentVariable("NuGetPackageOutputPath") with
+            | null | "" -> BuildConfig.BuildDir.Find env
+            | dir -> dir)
+
 [<Sealed>]
 type NuGetConfig() =
 
@@ -226,3 +232,6 @@ type NuGetConfig() =
 
     static member LocalRepositoryPath =
         localRepositoryPath
+
+    static member PackageOutputPath =
+        packageOutputPath

@@ -38,14 +38,15 @@
     <Compile Include="Frameworks.fsi" />
     <Compile Include="Frameworks.fs" />
     <Compile Include="Utilities.fs" />
+    <Compile Include="Interfaces.fs" />
     <Compile Include="Company.fsi" />
     <Compile Include="Company.fs" />
     <Compile Include="SafeNuGet.fsi" />
     <Compile Include="SafeNuGet.fs" />
-    <Compile Include="NuGetConfig.fsi" />
-    <Compile Include="NuGetConfig.fs" />
     <Compile Include="BuildConfig.fsi" />
     <Compile Include="BuildConfig.fs" />
+    <Compile Include="NuGetConfig.fsi" />
+    <Compile Include="NuGetConfig.fs" />
     <Compile Include="Package.fsi" />
     <Compile Include="Package.fs" />
     <Compile Include="AssemblyInfo.fsi" />

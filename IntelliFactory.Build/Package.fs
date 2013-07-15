@@ -65,7 +65,7 @@ type PackageVersionTool(env) =
             |> Seq.maxBy getBuild
         let n3 =
             let r = getBuild versionWithMaxN3
-            if r = getBuild orig then r + 1 else r
+            if r >= getBuild orig then r + 1 else r
         revise n3 orig
 
     member t.PickFreshPackageVersion(pid, v) =

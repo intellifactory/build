@@ -167,10 +167,19 @@ type FSharpProject(env, opts) =
     let ainfoPath = Path.Combine(outDir, opts.id + ".annotations.fs")
     let argsPath = Path.Combine(outDir, opts.id + ".args.txt")
 
+    interface INuGetExportingProject with
+
+        member p.LibraryFiles =
+            match opts.kind with
+            | FSharpKind.Library -> Seq.singleton outPath
+            | _ -> Seq.empty
+
     interface IProject with
 
         member p.Name = opts.name
         member p.Framework = fw
+
+        member p.GeneratedAssemblyFiles = Seq.singleton outPath
 
         member p.Build rs =
             let aid =

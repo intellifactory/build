@@ -8,6 +8,7 @@ open IntelliFactory.Build
 
 [<Sealed>]
 type BuildTool(?env) =
+    static let shouldClean = Parameter.Create false
     static let defaultEnv =
         let lc = LogConfig().Info().ToConsole()
         Parameters.Default
@@ -21,22 +22,41 @@ type BuildTool(?env) =
     let rr = References.Current.Find env
     let fw = Frameworks.Current.Find env
 
-    member bt.Configure(f: BuildTool -> BuildTool) = f bt
+    member bt.Configure(f) : BuildTool =
+        f bt
+
+    member bt.Parameteres = env
 
     member bt.With(p: Parameter<'T>, v: 'T) =
         BuildTool(p.Custom v env)
 
-    member bt.Parameteres = env
+    member bt.WithOption(p: Parameter<'T>, v: option<'T>) =
+        match v with
+        | None -> bt
+        | Some v -> BuildTool(p.Custom v env)
 
-    member bt.Dispatch(args: seq<string>) : Solution -> unit =
-        fun sln ->
-            if Seq.exists ((=) "--clean") args then
-                sln.Clean()
-            else
-                sln.Build()
+    member bt.WithCommandLineArgs(?args: seq<string>) =
+        let args =
+            match args with
+            | None -> Environment.GetCommandLineArgs() :> seq<_>
+            | Some args -> args
+        let (|S|_|) (p: string) (x: string) =
+            if x.StartsWith(p)
+                then Some (x.Substring(p.Length))
+                else None
+        let mutable bt = bt
+        for a in args do
+            match a with
+            | "--clean" -> bt <- bt.With(shouldClean, true)
+            | S "-v:" v -> bt <- bt.With(PackageVersion.Full, Version.Parse v)
+            | _ -> ()
+        bt
 
     member bt.Dispatch(sln: Solution) =
-        bt.Dispatch (Environment.GetCommandLineArgs()) sln
+        if shouldClean.Find env then
+            sln.Clean()
+        else
+            sln.Build()
 
     member bt.ResolveReferences fw refs = rr.Resolve fw refs
     member bt.NuGet = ng

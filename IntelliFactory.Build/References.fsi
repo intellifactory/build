@@ -18,6 +18,19 @@ namespace IntelliFactory.Build
 type Reference
 
 [<Sealed>]
+type ResolvedReferences =
+    member Paths : seq<string>
+    static member Empty : ResolvedReferences
+
+type IProject =
+    abstract Build : ResolvedReferences -> unit
+    abstract Clean : unit -> unit
+    abstract Framework : Framework
+    abstract GeneratedAssemblyFiles : seq<string>
+    abstract Name : string
+    abstract References : seq<Reference>
+
+[<Sealed>]
 type NuGetReference =
     member At : path: string -> NuGetReference
     member Latest : unit -> NuGetReference
@@ -26,25 +39,22 @@ type NuGetReference =
     member Version : string -> NuGetReference
     member Id : string
 
-[<Sealed>]
-type ReferenceBuilder =
-    member Assembly : string -> Reference
-    member File : string -> Reference
-    member NuGet : string -> NuGetReference
-    static member internal Current : Parameter<ReferenceBuilder>
-
-[<Sealed>]
-type ResolvedReferences =
-    member Paths : seq<string>
-    static member Empty : ResolvedReferences
-
 module ReferenceConfig =
     val AssemblySearchPaths : Parameter<Framework -> seq<string>>
     val FSharp3Runtime20 : Parameter<seq<string>>
     val FSharp3Runtime40 : Parameter<seq<string>>
 
 [<Sealed>]
+type ReferenceBuilder =
+    member Assembly : string -> Reference
+    member File : string -> Reference
+    member NuGet : string -> NuGetReference
+    member Project : IProject -> Reference
+    static member internal Current : Parameter<ReferenceBuilder>
+
+[<Sealed>]
 type References =
     member GetNuGetReference : Reference -> option<NuGetReference>
     member Resolve : Framework -> seq<Reference> -> ResolvedReferences
+    member ResolveProjectReferences : seq<Reference> -> ResolvedReferences -> ResolvedReferences
     static member internal Current : Parameter<References>

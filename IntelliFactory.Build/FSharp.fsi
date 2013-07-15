@@ -20,6 +20,7 @@ module FSharpConfig =
 [<Sealed>]
 type FSharpProject =
     interface IProject
+    interface INuGetExportingProject
 
     /// Sets the base directory of the Project.
     member BaseDir : string -> FSharpProject
