@@ -40,3 +40,6 @@ module BuildConfig =
             match c with
             | None -> None
             | Some c -> c.KeyFile())
+
+    let ProjectName =
+        Parameter.Create "Library"

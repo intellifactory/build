@@ -14,14 +14,22 @@
 
 namespace IntelliFactory.Build
 
-[<Sealed>]
-type Parameters =
+type IParametric =
+    abstract Find<'T> : Parameter<'T> -> 'T
+
+and IParametric<'R> =
+    inherit IParametric
+    abstract Custom<'T> : Parameter<'T> -> 'T -> 'R
+
+and [<Sealed>] Parameters =
+    interface IParametric
+    interface IParametric<Parameters>
     static member Default : Parameters
 
-[<Sealed>]
-type Parameter<'T> =
-    member Custom : 'T -> Parameters -> Parameters
-    member Find : Parameters -> 'T
+and [<Sealed>] Parameter<'T> =
+    member Custom : 'T -> IParametric<'R> -> 'R
+    member Find : IParametric -> 'T
+    member Update : ('T -> 'T) -> IParametric<'R> -> 'R
 
 [<Sealed>]
 type Parameter =

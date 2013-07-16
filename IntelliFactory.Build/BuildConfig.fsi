@@ -7,3 +7,4 @@ module BuildConfig =
     val BuildDir : Parameter<string>
     val OutputDir : Parameter<string>
     val RootDir : Parameter<string>
+    val ProjectName : Parameter<string>

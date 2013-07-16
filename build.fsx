@@ -13,6 +13,7 @@ open NuGet
 #load "IntelliFactory.Build/FileSystem.fs"
 #load "IntelliFactory.Build/XmlGenerator.fs"
 #load "IntelliFactory.Build/Parameters.fs"
+#load "IntelliFactory.Build/Cache.fs"
 #load "IntelliFactory.Build/Logging.fs"
 #load "IntelliFactory.Build/Frameworks.fs"
 #load "IntelliFactory.Build/Utilities.fs"

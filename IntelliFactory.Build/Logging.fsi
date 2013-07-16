@@ -42,13 +42,22 @@ type LogLevel =
     /// Warning level.
     static member Warn : LogLevel
 
+/// Represents a logger - a subscriber to the logging framework.
 type ILogger =
+
+    /// Decide if tracing at this level is supported.
     abstract ShouldTrace : LogLevel -> bool
+
+    /// Trace a message.
     abstract Trace : LogLevel * string -> unit
 
+/// Abstract logging configuration.
 type ILogConfig =
+
+    /// Get a logger for a given name.
     abstract GetNamedLogger : string -> ILogger
 
+/// Default logging configuration.
 [<Sealed>]
 type LogConfig =
     interface ILogConfig
@@ -68,18 +77,15 @@ type LogConfig =
     member Verbose : string -> LogConfig
     member Warn : unit -> LogConfig
     member Warn : string -> LogConfig
+
+    /// Current logging configuration.
     static member Current : Parameter<ILogConfig>
 
-/// Wraps TraceSource with support for hierarhical logging and more utility methods.
-///
-/// How it works: the hierarhical name `A.B.C` creates `TraceSource` objects like this:
-/// `A`, `A.B`, `A.B.C`. These `TraceSource` objects may be configured in `App.config` or
-/// `Web.config` to propagate messages of certain priority to loggers.
-/// When a message is sent to a `Log` object, it is transfered to the most specific
-/// `TraceSource` ready to accept it, with prefixing as necessary to identify where it
-/// comes from.
+/// Implements support for hierarhical logging, similar to TraceSource.
 [<Sealed>]
 type Log =
+    interface IParametric
+    interface IParametric<Log>
 
     /// Sends a Critical-level message.
     member Critical : string -> unit
@@ -138,9 +144,6 @@ type Log =
 
     /// Sends a Warn-level message.
     member Warn : string * [<ParamArray>] args: obj [] -> unit
-
-    /// Configures the logging system.
-    static member Configure : ILogConfig -> Parameters -> Parameters
 
     /// Creates a log, inferring the name from the given type.
     static member Create<'T> : Parameters -> Log

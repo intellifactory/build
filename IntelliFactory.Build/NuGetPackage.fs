@@ -71,7 +71,13 @@ type NuGetPackageBuilder(settings, env) =
                         yield SafeNuGetPackageFile.Create(f, t)
                 | _ -> ()
             ]
-        NuGetPackageBuilder({ settings with Contents = settings.Contents @ fs }, env)
+        let settings =
+            {
+                settings with
+                    Contents = settings.Contents @ fs
+                    PackageConfig = { settings.PackageConfig with NuGetReferences = ng }
+            }
+        NuGetPackageBuilder(settings, env)
 
     member p.Apache20License() =
         upd (cfg.WithApache20License())

@@ -33,6 +33,8 @@
     <Compile Include="CommonBuildSetup.fs" />
     <Compile Include="Parameters.fsi" />
     <Compile Include="Parameters.fs" />
+    <Compile Include="Cache.fsi" />
+    <Compile Include="Cache.fs" />
     <Compile Include="Logging.fsi" />
     <Compile Include="Logging.fs" />
     <Compile Include="Frameworks.fsi" />
@@ -57,6 +59,8 @@
     <Compile Include="Solutions.fs" />
     <Compile Include="FSharp.fsi" />
     <Compile Include="FSharp.fs" />
+    <Compile Include="WebSharper.fsi" />
+    <Compile Include="WebSharper.fs" />
     <Compile Include="NuGetPackage.fsi" />
     <Compile Include="NuGetPackage.fs" />
     <Compile Include="BuildTool.fs" />

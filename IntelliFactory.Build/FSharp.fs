@@ -26,9 +26,17 @@ open System.Xml.Linq
 module XG = IntelliFactory.Build.XmlGenerator
 module FS = IntelliFactory.Build.FileSystem
 
+type FSharpKind =
+    | ConsoleExecutable
+    | Library
+    | WindowsExecutable
+
+module FSharpConstants =
+    let MSBuild = "http://schemas.microsoft.com/developer/msbuild/2003"
+
 module FSharpConfig =
 
-    let Home =
+    let FSharpHome =
         Parameter.Define(fun env ->
             match Environment.GetEnvironmentVariable("FSharpHome") with
             | null | "" ->
@@ -36,43 +44,52 @@ module FSharpConfig =
                 Path.Combine(pf, "Microsoft SDKs", "F#", "3.0", "Framework", "v4.0")
             | h -> h)
 
-type FSharpKind =
-    | ConsoleExecutable
-    | Library
-    | WindowsExecutable
+    let BaseDir =
+        Parameter.Define(fun env ->
+            let name = BuildConfig.ProjectName.Find env
+            let root = BuildConfig.RootDir.Find env
+            Path.Combine(root, name))
 
-[<AutoOpen>]
-module FSharpProjectUtils =
+    let Kind = Parameter.Create Library
 
-    let getProjTypeArg pt =
-        match pt with
-        | ConsoleExecutable -> "--target:exe"
-        | Library -> "--target:library"
-        | WindowsExecutable -> "--target:winexe"
+    let OutputPath =
+        Parameter.Define(fun env ->
+            let outDir = BuildConfig.OutputDir.Find env
+            let kind = Kind.Find env
+            let ext =
+                match kind with
+                | ConsoleExecutable | WindowsExecutable -> ".exe"
+                | Library -> ".dll"
+            let name = BuildConfig.ProjectName.Find env
+            Path.Combine(outDir, name + ext))
 
-    let getOutputPath name kind dir =
-        let ext =
-            match kind with
-            | ConsoleExecutable | WindowsExecutable -> ".exe"
-            | Library -> ".dll"
-        Path.Combine(dir, name + ext)
+    let DocPath =
+        Parameter.Define(fun env ->
+            let out = OutputPath.Find env
+            Some (Path.ChangeExtension(out, ".xml")))
 
-    let getMSBuildExtension pt =
-        match pt with
-        | _ -> ".fsproj"
+    let ReferenceProjectPath =
+        Parameter.Define(fun env ->
+            let outDir = BuildConfig.OutputDir.Find env
+            let name = BuildConfig.ProjectName.Find env
+            Some (Path.Combine(outDir, name + ".proj")))
 
-    module Namespaces =
+    let OtherFlags : Parameter<seq<string>> =
+        Parameter.Create Seq.empty
 
-        let MSBuild = "http://schemas.microsoft.com/developer/msbuild/2003"
+    let References : Parameter<seq<Reference>> =
+        Parameter.Create Seq.empty
+
+    let Sources : Parameter<seq<string>> =
+        Parameter.Create Seq.empty
 
 [<Sealed>]
-type FSharpProjectParser private (env: Parameters) =
-    static let current = Parameter.Define(fun env -> FSharpProjectParser env)
+type FSharpProjectParser(env: Parameters) =
 
     member p.Parse(msbFile: string, baseDir: string) =
         let doc = XDocument.Load(msbFile)
         seq {
-            for el in doc.Descendants(XName.Get("Compile", Namespaces.MSBuild)) do
+            for el in doc.Descendants(XName.Get("Compile", FSharpConstants.MSBuild)) do
                 match el.Attribute(XName.Get("Include")) with
                 | null -> ()
                 | a ->
@@ -80,194 +97,180 @@ type FSharpProjectParser private (env: Parameters) =
         }
         |> Reify
 
-    static member Current = current
-
 [<Sealed>]
-type FSharpProjectWriter private (env) =
-    static let current = Parameter.Define(fun env -> FSharpProjectWriter env)
+type FSharpProjectWriter(env) =
     let log = Log.Create<FSharpProjectWriter>(env)
-    let root = BuildConfig.RootDir.Find(env)
-    let out = BuildConfig.OutputDir.Find(env)
-    let genFile id = Path.Combine(out, id + ".proj")
+    let path = FSharpConfig.ReferenceProjectPath.Find env
+    let baseDir = FSharpConfig.BaseDir.Find env
 
-    member pw.Write(id: string, refs: ResolvedReferences) =
-        let e n = XG.Element.Create(n, Namespaces.MSBuild)
-        let xml =
-            e "Project" - [
-                e "ItemGroup" - [
-                    for r in refs.Paths do
-                        let n = AssemblyName.GetAssemblyName(r)
-                        yield e "Reference" + ["Include", string n.Name] - [
-                            e "HintPath" -- Path.GetFullPath(Path.Combine(root, r))
-                            e "Private" -- "False"
-                        ]
+    member pw.Write(refs: ResolvedReferences) =
+        match path with
+        | None -> ()
+        | Some path ->
+            let e n = XG.Element.Create(n, FSharpConstants.MSBuild)
+            let xml =
+                e "Project" - [
+                    e "ItemGroup" - [
+                        for r in refs.Paths do
+                            let n = AssemblyName.GetAssemblyName(r)
+                            yield e "Reference" + ["Include", string n.Name] - [
+                                e "HintPath" -- Path.GetFullPath(Path.Combine(baseDir, r))
+                                e "Private" -- "False"
+                            ]
+                    ]
                 ]
-            ]
-            |> XG.Write
-        let file = genFile id
-        log.Verbose("Generating {0}", file)
-        FS.TextContent(xml).WriteFile(file)
+                |> XG.Write
+            log.Verbose("Generating {0}", path)
+            FS.TextContent(xml).WriteFile(path)
 
-    member pw.Clean(id) =
-        let f = genFile id
-        if IsFile f then
-            File.Delete f
-
-    static member Current = current
-
-type FSharpProjectOptions =
-    {
-        baseDir : string
-        id : string
-        kind : FSharpKind
-        name : string
-        otherFlags : list<string>
-        references : list<Reference>
-        sources : list<string>
-    }
-
-    static member Default root kind name =
-        {
-            baseDir = Path.Combine(root, name)
-            id = name
-            kind = kind
-            name = name
-            otherFlags = []
-            references = []
-            sources = []
-        }
+    member pw.Clean() =
+        match path with
+        | None -> ()
+        | Some path ->
+            if IsFile path then
+                File.Delete path
 
 [<Sealed>]
-type FSharpProject(env, opts) =
-    let pW = FSharpProjectWriter.Current.Find env
-    let fw = BuildConfig.CurrentFramework.Find env
-    let outDir = BuildConfig.OutputDir.Find env
-    let log = Log.Create<FSharpProject>(env)
-    let fsHome = FSharpConfig.Home.Find env
-    let rB = ReferenceBuilder.Current.Find env
-    let pP = FSharpProjectParser.Current.Find env
+type FSharpProjectBuilder(env: Parameters, log: Log) =
     let aig = AssemblyInfoGenerator.Current.Find env
+    let name = BuildConfig.ProjectName.Find env
+    let outDir = BuildConfig.OutputDir.Find env
+    let baseDir = FSharpConfig.BaseDir.Find env
+    let sources = FSharpConfig.Sources.Find env
+    let pW = FSharpProjectWriter(env)
+    let docPath = FSharpConfig.DocPath.Find env
+    let outPath = FSharpConfig.OutputPath.Find env
     let kf = BuildConfig.KeyFile.Find env
+    let otherFlags = FSharpConfig.OtherFlags.Find env
+    let kind = FSharpConfig.Kind.Find env
+    let fsharpHome = FSharpConfig.FSharpHome.Find env
+    let argsPath = Path.Combine(outDir, name + ".args.txt")
+    let ainfoPath = Path.Combine(outDir, name + ".annotations.fs")
+    let fw = BuildConfig.CurrentFramework.Find env
+    let refs = FSharpConfig.References.Find env
+    let aid =
+        let d = AssemblyInfoData.Current.Find env
+        let t =
+            d.Title
+            |> OrElse (Some name)
+        { d with Title = t }
 
-    let orElse a b =
-        match a with
-        | None -> b
-        | _ -> a
+    member p.Build(rr: ResolvedReferences) =
+        aig.Generate(AssemblyInfoSyntax.FSharp, aid, ainfoPath)
+        pW.Write rr
+        let sourceFiles =
+            [
+                for s in sources do
+                    yield Path.Combine(baseDir, s)
+            ]
+        let getProjTypeArg pt =
+            match pt with
+            | ConsoleExecutable -> "--target:exe"
+            | Library -> "--target:library"
+            | WindowsExecutable -> "--target:winexe"
+        let args =
+            [|
+                yield getProjTypeArg kind
+                yield "--noframework"
+                yield "--out:" + outPath
+                match docPath with
+                | None -> ()
+                | Some docPath ->
+                    yield "--doc:" + docPath
+                for r in rr.Paths do
+                    yield "-r"
+                    yield r
+                match kf with
+                | None -> ()
+                | Some kf -> yield "--keyfile:" + kf
+                yield! otherFlags
+                yield ainfoPath
+                yield! sourceFiles
+            |]
+        PrepareDir outPath
+        let fsc = Path.Combine(fsharpHome, "fsc.exe")
+        do
+            let t =
+                args
+                |> Seq.append [fsc]
+                |> String.concat Environment.NewLine
+            FS.TextContent(t).WriteFile(argsPath)
+        let inputFiles =
+            [
+                yield argsPath
+                yield ainfoPath
+                yield! sourceFiles
+            ]
+        let outputFiles =
+            [
+                yield! Option.toList docPath
+                yield outPath
+            ]
+        let lastWrite files =
+            files
+            |> Seq.map File.GetLastWriteTimeUtc
+            |> Seq.max
+        if lastWrite inputFiles > lastWrite outputFiles then
+            log.Info("Building {0}", name)
+            for arg in args do
+                log.Verbose("    {0}", arg)
+            let r = AppDomain.CurrentDomain.ExecuteAssembly(fsc, args)
+            if r <> 0 then
+                failwithf "Non-zero exit code: %i" r
+        else
+            log.Info("Skipping {0}", name)
 
-    let getAssemblyInfoData () =
-        let data = AssemblyInfoData.Current.Find env
-        {
-            data with
-                Title = data.Title |> orElse (Some opts.name)
-                Version = data.Version 
-        }
+    member p.Clean() =
+        let rm p =
+            if IsFile p then
+                File.Delete(p)
+        [
+            yield outPath
+            yield! Option.toList docPath
+            yield ainfoPath
+            yield argsPath
+        ]
+        |> List.iter rm
+        pW.Clean()
 
-    let outPath = getOutputPath opts.name opts.kind outDir
-    let docPath = Path.ChangeExtension(outPath, ".xml")
-    let ainfoPath = Path.Combine(outDir, opts.id + ".annotations.fs")
-    let argsPath = Path.Combine(outDir, opts.id + ".args.txt")
+    member p.Framework = fw
+    member p.GeneratedAssemblyFiles = Seq.singleton outPath
+
+    member p.LibraryFiles =
+        match kind with
+        | FSharpKind.Library -> Seq.singleton outPath
+        | _ -> Seq.empty
+
+    member p.Name = name
+    member p.References = refs
+
+[<Sealed>]
+type FSharpProject(env: Parameters) =
+    let log = Log.Create<FSharpProject>(env)
+    let baseDir = FSharpConfig.BaseDir.Find env
+    let name = BuildConfig.ProjectName.Find env
+    let b = lazy FSharpProjectBuilder(env, log)
+    let pP = lazy FSharpProjectParser(env)
+
+    let appendParameters (par: Parameter<_>) xs ps =
+        par.Custom (Reify (Seq.append (par.Find env) xs)) ps
 
     interface INuGetExportingProject with
+        member p.LibraryFiles = b.Value.LibraryFiles
 
-        member p.LibraryFiles =
-            match opts.kind with
-            | FSharpKind.Library -> Seq.singleton outPath
-            | _ -> Seq.empty
+    interface IParametric with
+        member fp.Find p = p.Find env
+
+    interface IParametric<FSharpProject> with
+        member fp.Custom p v = FSharpProject(p.Custom v env)
 
     interface IProject with
-
-        member p.Name = opts.name
-        member p.Framework = fw
-
-        member p.GeneratedAssemblyFiles = Seq.singleton outPath
-
-        member p.Build rs =
-            let aid =
-                let d = AssemblyInfoData.Current.Find env
-                let t =
-                    d.Title
-                    |> orElse (Some opts.name)
-                { d with Title = t }
-            aig.Generate(AssemblyInfoSyntax.FSharp, aid, ainfoPath)
-            pW.Write(opts.id, rs)
-            let sourceFiles =
-                [
-                    for s in opts.sources do
-                        yield Path.Combine(opts.baseDir, s)
-                ]
-            let args =
-                [|
-                    yield getProjTypeArg opts.kind
-                    yield "--noframework"
-                    yield "--out:" + outPath
-                    yield "--doc:" + docPath
-                    for r in rs.Paths do
-                        yield "-r"
-                        yield r
-                    match kf with
-                    | Some kf -> yield "--keyfile:" + kf
-                    | _ -> ()
-                    yield! opts.otherFlags
-                    yield ainfoPath
-                    yield! sourceFiles
-               |]
-            PrepareDir outPath
-            let fsc = Path.Combine(fsHome, "fsc.exe")
-            do
-                let t =
-                    args
-                    |> Seq.append [fsc]
-                    |> String.concat Environment.NewLine
-                FS.TextContent(t).WriteFile(argsPath)
-            let inputFiles =
-                [
-                    yield argsPath
-                    yield ainfoPath
-                    yield! sourceFiles
-                ]
-            let outputFiles =
-                [
-                    docPath
-                    outPath
-                ]
-            let lastWrite files =
-                files
-                |> Seq.map File.GetLastWriteTimeUtc
-                |> Seq.max
-            if lastWrite inputFiles > lastWrite outputFiles then
-                log.Info("Building {0}", opts.id)
-                for arg in args do
-                    log.Verbose("    {0}", arg)
-                let r = AppDomain.CurrentDomain.ExecuteAssembly(fsc, args)
-                if r <> 0 then
-                    failwithf "Non-zero exit code: %i" r
-            else
-                log.Info("Skipping {0}", opts.id)
-
-        member p.Clean() =
-            let rm p =
-                if IsFile p then
-                    File.Delete(p)
-            [
-                outPath
-                docPath
-                ainfoPath
-                argsPath
-            ]
-            |> List.iter rm
-            pW.Clean opts.id
-
-        member p.References =
-            Seq.ofList opts.references
-
-    member p.Update opts =
-        FSharpProject(env, opts)
-
-    member p.Flags fs =
-        p.Update { opts with otherFlags = opts.otherFlags @ Seq.toList fs }
-
-    member p.Id id =
-        p.Update { opts with id = id }
+        member p.Build rr = b.Value.Build rr
+        member p.Clean() = b.Value.Clean()
+        member p.Framework = b.Value.Framework
+        member p.GeneratedAssemblyFiles = b.Value.GeneratedAssemblyFiles
+        member p.Name = b.Value.Name
+        member p.References = b.Value.References
 
     member p.Modules ms =
         let sources =
@@ -277,40 +280,33 @@ type FSharpProject(env, opts) =
                     yield m + ".fs"
             ]
             |> List.filter (fun path ->
-                Path.Combine(opts.baseDir, path)
+                Path.Combine(baseDir, path)
                 |> IsFile)
-        p.Update { opts with sources = opts.sources @ sources }
-
-    member p.BaseDir d =
-        p.Update { opts with baseDir = d }
+        appendParameters FSharpConfig.Sources sources p
 
     member p.References f =
-        let rs = f rB |> Seq.toList
-        p.Update { opts with references = opts.references @ rs }
+        let rB = ReferenceBuilder.Current.Find env
+        appendParameters FSharpConfig.References (f rB) p
 
     member p.Sources sources =
-        p.Update { opts with sources = opts.sources @ Seq.toList sources }
+        appendParameters FSharpConfig.Sources sources p
 
     member p.SourcesFromProject(?msbuildProject) =
-        let msbp = defaultArg msbuildProject (opts.name + getMSBuildExtension opts.kind)
-        let msb = Path.GetFullPath(Path.Combine(opts.baseDir, msbp))
-        p.Update { opts with sources = opts.sources @ Seq.toList (pP.Parse(msb, opts.baseDir)) }
-
-    member p.LibraryFiles =
-        Seq.ofList [
-            outPath
-            docPath
-        ]
+        let msbp = defaultArg msbuildProject (name + ".fsproj")
+        let msb = Path.GetFullPath(Path.Combine(baseDir, msbp))
+        pP.Value.Parse(msb, baseDir)
+        |> p.Sources
 
 [<Sealed>]
 type FSharpProjects(env) =
     static let current = Parameter.Define(fun env -> FSharpProjects env)
-    let fwt = Frameworks.Current.Find env
-    let root = BuildConfig.RootDir.Find env
 
     let create kind name =
-        let opts = FSharpProjectOptions.Default root kind name
-        FSharpProject(env, opts)
+        let env =
+            env
+            |> FSharpConfig.Kind.Custom kind
+            |> BuildConfig.ProjectName.Custom name
+        FSharpProject(env)
 
     member t.ConsoleExecutable name =
         create ConsoleExecutable name

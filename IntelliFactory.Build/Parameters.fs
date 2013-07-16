@@ -18,16 +18,16 @@ open System
 open System.Collections.Generic
 open System.Threading
 
-type Key = int64
+type ParameterKey = int64
 
-module Keys =
+module ParameterKeys =
     let mutable counter = 0L
     let fresh () = Interlocked.Increment(&counter)
 
 type Parameters =
     {
-        cache : Dictionary<Key,obj>
-        map : Map<Key,obj>
+        cache : Dictionary<ParameterKey,obj>
+        map : Map<ParameterKey,obj>
         root : obj
     }
 
@@ -38,34 +38,52 @@ type Parameters =
             root = obj ()
         }
 
-type Parameter<'T> =
+    interface IParametric with
+        member ps.Find p =
+            lock ps.root <| fun () ->
+                let (|T|_|) (x: obj) =
+                    p.unpack x
+                match ps.cache.TryGetValue(p.key) with
+                | true, T v -> v
+                | _ -> 
+                    let v =
+                        match Map.tryFind p.key ps.map with
+                        | Some (T v) -> v
+                        | _ -> p.def ps
+                    ps.cache.[p.key] <- p.pack v
+                    v
+
+    interface IParametric<Parameters> with
+        member ps.Custom p v =
+            {
+                cache = Dictionary()
+                map = Map.add p.key (p.pack v) ps.map
+                root = obj ()
+            }
+
+and Parameter<'T> =
     {
         def : Parameters -> 'T
-        key : Key
+        key : ParameterKey
         pack : 'T -> obj
         unpack : obj -> option<'T>
     }
 
-    member p.Custom(v: 'T)(ps: Parameters) =
-        {
-            cache = Dictionary()
-            map = Map.add p.key (p.pack v) ps.map
-            root = obj ()
-        }
+    member p.Custom(v: 'T)(ps: IParametric<'R>) =
+        ps.Custom p v
 
-    member p.Find(ps: Parameters) : 'T =
-        lock ps.root <| fun () ->
-            let (|T|_|) (x: obj) =
-                p.unpack x
-            match ps.cache.TryGetValue(p.key) with
-            | true, T v -> v
-            | _ -> 
-                let v =
-                    match Map.tryFind p.key ps.map with
-                    | Some (T v) -> v
-                    | _ -> p.def ps
-                ps.cache.[p.key] <- p.pack v
-                v
+    member p.Find(ps: IParametric) : 'T =
+        ps.Find p
+
+    member p.Update(f: 'T -> 'T)(ps: IParametric<'R>) =
+        p.Custom (f (p.Find ps)) ps
+
+and IParametric<'R> =
+    inherit IParametric
+    abstract Custom<'T> : Parameter<'T> -> 'T -> 'R
+
+and IParametric =
+    abstract Find<'T> : Parameter<'T> -> 'T
 
 [<Sealed>]
 type Parameter =
@@ -73,7 +91,7 @@ type Parameter =
     static member Define<'T>(make: Parameters -> 'T) =
         {
             def = make
-            key = Keys.fresh ()
+            key = ParameterKeys.fresh ()
             pack = fun x -> box x
             unpack = fun x ->
                 match x with

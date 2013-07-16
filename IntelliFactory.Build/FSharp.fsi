@@ -14,26 +14,44 @@
 
 namespace IntelliFactory.Build
 
+/// Global parameters building for F# projects.
 module FSharpConfig =
-    val Home : Parameter<string>
 
+    /// The base directory against which project-local paths are resolved.
+    val BaseDir : Parameter<string>
+
+    /// Path to the generated XML file, if one is desired.
+    val DocPath : Parameter<option<string>>
+
+    /// F# home directory where `fsc.exe` resides.
+    val FSharpHome : Parameter<string>
+
+    /// Extra flags to pass to the F# compiler.
+    val OtherFlags : Parameter<seq<string>>
+
+    /// The primary DLL or EXE output path.
+    val OutputPath : Parameter<string>
+
+    /// If set, gives the path of the the MSBuild project file to generate.
+    /// The generated file will contain all resolved references.
+    val ReferenceProjectPath : Parameter<option<string>>
+
+    /// References to resovle before building the project.
+    val References : Parameter<seq<Reference>>
+
+    /// Paths to source files to compile.
+    val Sources : Parameter<seq<string>>
+
+/// Represents an F# project building a single assembly.
 [<Sealed>]
 type FSharpProject =
-    interface IProject
     interface INuGetExportingProject
-
-    /// Sets the base directory of the Project.
-    member BaseDir : string -> FSharpProject
-
-    /// Sets the project identifier (defaults to the project name).
-    member Id : string -> FSharpProject
+    interface IParametric<FSharpProject>
+    interface IProject
 
     /// A shorthand for adding sources, for every module name `N`,
     /// `N.fsi` and `N.fs` are included automatically.
     member Modules : seq<string> -> FSharpProject
-
-    /// Adds miscellaneous F# flags to pass as arguments to FSC.
-    member Flags : seq<string> -> FSharpProject
 
     /// Adds references to the Project.
     member References : def: (ReferenceBuilder -> #seq<Reference>) -> FSharpProject
@@ -46,12 +64,18 @@ type FSharpProject =
     /// If no project file is given, infers it from the project name.
     member SourcesFromProject : ?msBuildProject: string -> FSharpProject
 
-    /// The generated library and documentation files (DLL, XML).
-    member LibraryFiles : seq<string>
-
+/// Constructs F# projects.
 [<Sealed>]
 type FSharpProjects =
+
+    /// Creates a console (exe) project.
     member ConsoleExecutable : name: string -> FSharpProject
+
+    /// Creates a library project.
     member Library : name: string -> FSharpProject
+
+    /// Creates a non-console executable (winexe) project.
     member WindowsExecutable : name: string -> FSharpProject
+
+    /// Current `FSharpProjects` instance.
     static member internal Current : Parameter<FSharpProjects>

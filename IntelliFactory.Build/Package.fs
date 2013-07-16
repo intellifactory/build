@@ -27,6 +27,7 @@ type private SV = SafeNuGetSemanticVersion
 type PackageVersionTool(env) =
     let log = Log.Create<PackageVersionTool>(env)
     let buildNumber = BuildConfig.BuildNumber.Find env
+    let cache = Cache.Current.Find env
 
     [<SecuritySafeCritical>]
     let getPackageManager () =
@@ -68,11 +69,16 @@ type PackageVersionTool(env) =
             if r >= getBuild orig then r + 1 else r
         revise n3 orig
 
+    static let freshVersionKey = CacheKey()
+
     member t.PickFreshPackageVersion(pid, v) =
-        let all = getUsedVersions pid
-        let r = pickVersion all v
-        log.Info("{0} --> {1}", v, r)
-        r
+       (pid, string v)
+       |> cache.Lookup freshVersionKey (fun (pid, v) ->
+            let v = SV.Parse v
+            let all = getUsedVersions pid
+            let r = pickVersion all v
+            log.Info("{0} --> {1}", v, r)
+            r)
 
 [<Sealed>]
 type PackageVersion(major: int, minor: int, ?suffix: string) =

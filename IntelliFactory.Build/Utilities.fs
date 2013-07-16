@@ -22,6 +22,11 @@ open IntelliFactory.Build
 open System
 open System.IO
 
+let OrElse a b =
+    match a with
+    | None -> b
+    | _ -> a
+
 let IsFile f =
     FileInfo(f).Exists
 
