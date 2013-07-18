@@ -173,6 +173,9 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
                 yield "-n:" + name
                 yield "-o:" + outputPath2
                 yield "-v:" + string (Version (ver.Major, ver.Minor, 0, 0))
+                match docPath with
+                | None -> ()
+                | Some doc -> yield "-doc:" + doc
                 match snk with
                 | None -> ()
                 | Some snk -> yield "-snk:" + snk
