@@ -19,6 +19,15 @@ type AssemblyInfoSyntax =
     static member CSharp = CSharpSyntax
     static member FSharp = FSharpSyntax
 
+[<Sealed>]
+type AssemblyInfoAttribute(typeName: string) =
+    static member Create(n) = AssemblyInfoAttribute(n)
+
+    member a.Generate(stx: AssemblyInfoSyntax, out: TextWriter) =
+        match stx with
+        | CSharpSyntax -> out.WriteLine("[{0}]", typeName)
+        | FSharpSyntax -> out.WriteLine("[<assembly: global.{0}>]", typeName)
+
 type AssemblyInfoData =
     {
         ClsCompilant : option<bool>
@@ -27,6 +36,7 @@ type AssemblyInfoData =
         Configuration : option<string>
         Copyright : option<string>
         Culture : option<string>
+        CustomAttributes : list<AssemblyInfoAttribute>
         Description : option<string>
         FileVersion : option<Version>
         Guid : option<Guid>
@@ -49,6 +59,7 @@ type AssemblyInfoData =
             Configuration = None
             Copyright = None
             Culture = None
+            CustomAttributes = []
             Description = None
             FileVersion = None
             Guid = None
@@ -156,6 +167,9 @@ module AssemblyInfoGeneration =
         ver t<AssemblyFileVersionAttribute> o s d.FileVersion
         ver t<AssemblyVersionAttribute> o s d.Version
         ver t<AssemblyInformationalVersionAttribute> o s d.InfoVersion
+
+        for a in d.CustomAttributes do
+            a.Generate(s, o)
 
         if s = FSharpSyntax then
             o.WriteLine "do ()"

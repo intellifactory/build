@@ -16,6 +16,7 @@ namespace IntelliFactory.Build
 
 type IParametric =
     abstract Find<'T> : Parameter<'T> -> 'T
+    abstract Parameters : Parameters
 
 and IParametric<'R> =
     inherit IParametric
@@ -25,6 +26,7 @@ and [<Sealed>] Parameters =
     interface IParametric
     interface IParametric<Parameters>
     static member Default : Parameters
+    static member Get : IParametric -> Parameters
 
 and [<Sealed>] Parameter<'T> =
     member Custom : 'T -> IParametric<'R> -> 'R

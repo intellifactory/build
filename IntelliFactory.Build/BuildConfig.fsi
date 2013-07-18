@@ -1,6 +1,9 @@
 ﻿namespace IntelliFactory.Build
 
+open System
+
 module BuildConfig =
+    val AppDomain : Parameter<AppDomain>
     val BuildNumber : Parameter<option<int>>
     val CurrentFramework : Parameter<Framework>
     val KeyFile : Parameter<option<string>>

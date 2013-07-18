@@ -3,6 +3,10 @@
 open System
 open System.Runtime.Versioning
 
+[<Sealed>]
+type AssemblyInfoAttribute =
+    static member Create : typeName: string -> AssemblyInfoAttribute
+
 type AssemblyInfoData =
     {
         ClsCompilant : option<bool>
@@ -11,6 +15,7 @@ type AssemblyInfoData =
         Configuration : option<string>
         Copyright : option<string>
         Culture : option<string>
+        CustomAttributes : list<AssemblyInfoAttribute>
         Description : option<string>
         FileVersion : option<Version>
         Guid : option<Guid>

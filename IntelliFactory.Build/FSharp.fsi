@@ -14,6 +14,11 @@
 
 namespace IntelliFactory.Build
 
+type internal FSharpKind =
+    | FSharpConsoleExecutable
+    | FSharpLibrary
+    | FSharpWindowsExecutable
+
 /// Global parameters building for F# projects.
 module FSharpConfig =
 
@@ -22,6 +27,9 @@ module FSharpConfig =
 
     /// Path to the generated XML file, if one is desired.
     val DocPath : Parameter<option<string>>
+
+    /// Paths to resources to embed into the assembly.
+    val EmbeddedResources : Parameter<seq<string>>
 
     /// F# home directory where `fsc.exe` resides.
     val FSharpHome : Parameter<string>
@@ -42,27 +50,51 @@ module FSharpConfig =
     /// Paths to source files to compile.
     val Sources : Parameter<seq<string>>
 
+    /// The kind of project to build.
+    val internal Kind : Parameter<FSharpKind>
+
+/// Internal facade for the F# builder.
+[<Sealed>]
+type internal FSharpCompilerTask =
+    new : Parameters * Log * ResolvedReferences -> FSharpCompilerTask
+    member Build : unit -> unit
+    member Arguments : seq<string>
+    member ToolPath : string
+
 /// Represents an F# project building a single assembly.
 [<Sealed>]
 type FSharpProject =
+    interface IFSharpProjectContainer<FSharpProject>
     interface INuGetExportingProject
     interface IParametric<FSharpProject>
     interface IProject
 
-    /// A shorthand for adding sources, for every module name `N`,
-    /// `N.fsi` and `N.fs` are included automatically.
-    member Modules : seq<string> -> FSharpProject
+and IFSharpProjectContainer<'T> =
+    abstract FSharpProject : FSharpProject
+    abstract WithFSharpProject : FSharpProject -> 'T
 
-    /// Adds references to the Project.
-    member References : def: (ReferenceBuilder -> #seq<Reference>) -> FSharpProject
+[<AutoOpen>]
+module FSharpProjectExtensinos =
 
-    /// Adds paths to F# sources.
-    member Sources : seq<string> -> FSharpProject
+    type IFSharpProjectContainer<'T> with
 
-    /// Approximately parses an MSBuild project file looking for `Compile` declarations.
-    /// Adds all files it finds to the current project sources.
-    /// If no project file is given, infers it from the project name.
-    member SourcesFromProject : ?msBuildProject: string -> FSharpProject
+        /// Adds resource files to embed.
+        member Embed : seq<string> -> 'T
+
+        /// A shorthand for adding sources, for every module name `N`,
+        /// `N.fsi` and `N.fs` are included automatically.
+        member Modules : seq<string> -> 'T
+
+        /// Adds references to the Project.
+        member References : def: (ReferenceBuilder -> #seq<Reference>) -> 'T
+
+        /// Adds paths to F# sources.
+        member Sources : seq<string> -> 'T
+
+        /// Approximately parses an MSBuild project file looking for `Compile` declarations.
+        /// Adds all files it finds to the current project sources.
+        /// If no project file is given, infers it from the project name.
+        member SourcesFromProject : ?msBuildProject: string -> 'T
 
 /// Constructs F# projects.
 [<Sealed>]

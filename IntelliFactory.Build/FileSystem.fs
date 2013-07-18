@@ -27,31 +27,37 @@ let DirExists (path: string) =
     DirectoryInfo(path).Exists
 
 let PrepareFileForWriting (fullPath: string) : unit =
+    let fullPath = Path.GetFullPath fullPath
     let d = Path.GetDirectoryName fullPath
     if not (DirExists d) then
         ignore (Directory.CreateDirectory d)
 
-let EnsureBinaryFile (fullPath: string) (contents: byte []) : unit =
+let EnsureBinaryFile (fullPath: string) (contents: byte []) : bool =
     PrepareFileForWriting fullPath
-    let inline def () = File.WriteAllBytes(fullPath, contents)
+    let inline def () =
+        File.WriteAllBytes(fullPath, contents)
+        true
     if FileExists fullPath
-        then if File.ReadAllBytes fullPath <> contents then def ()
+        then if File.ReadAllBytes fullPath <> contents then def () else false
         else def ()
 
-let EnsureTextFile (fullPath: string) (contents: string) : unit =
+let EnsureTextFile (fullPath: string) (contents: string) : bool =
     PrepareFileForWriting fullPath
-    let inline def () = File.WriteAllText(fullPath, contents, DefaultEncoding)
+    let inline def () =
+        File.WriteAllText(fullPath, contents, DefaultEncoding)
+        true
     if FileExists fullPath
-        then if File.ReadAllText fullPath <> contents then def ()
+        then if File.ReadAllText fullPath <> contents then def () else false
         else def ()
 
 type Binary =
     private { data: byte [] }
 
-    member this.GetBytes() = Array.copy this.data
-    member this.Read() = new MemoryStream(this.data, false) :> Stream
-    member this.Write(s: Stream) = s.Write(this.data, 0, this.data.Length)
-    member this.WriteFile(p) = EnsureBinaryFile p this.data
+    member b.EnsureFile(p) = EnsureBinaryFile p b.data
+    member b.GetBytes() = Array.copy b.data
+    member b.Read() = new MemoryStream(b.data, false) :> Stream
+    member b.Write(s: Stream) = s.Write(b.data, 0, b.data.Length)
+    member b.WriteFile(p) = b.EnsureFile(p) |> ignore
     static member FromBytes(bytes) = { data = Array.copy bytes }
     static member ReadFile(fullPath) = { data = File.ReadAllBytes(fullPath) }
 
@@ -70,10 +76,13 @@ type Content =
     | BinaryContent of Binary
     | TextContent of string
 
-    member this.WriteFile(p) =
-        match this with
-        | BinaryContent b -> b.WriteFile(p)
+    member c.EnsureFile p =
+        match c with
+        | BinaryContent b -> b.EnsureFile p
         | TextContent s -> EnsureTextFile p s
+
+    member c.WriteFile p =
+        c.EnsureFile p |> ignore
 
     static member ReadBinaryFile(p) =
         BinaryContent (Binary.ReadFile p)

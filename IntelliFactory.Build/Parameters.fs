@@ -31,6 +31,9 @@ type Parameters =
         root : obj
     }
 
+    static member Get(p: IParametric) =
+        p.Parameters
+
     static member Default =
         {
             cache = Dictionary()
@@ -39,6 +42,7 @@ type Parameters =
         }
 
     interface IParametric with
+
         member ps.Find p =
             lock ps.root <| fun () ->
                 let (|T|_|) (x: obj) =
@@ -52,6 +56,8 @@ type Parameters =
                         | _ -> p.def ps
                     ps.cache.[p.key] <- p.pack v
                     v
+
+        member ps.Parameters = ps
 
     interface IParametric<Parameters> with
         member ps.Custom p v =
@@ -84,6 +90,7 @@ and IParametric<'R> =
 
 and IParametric =
     abstract Find<'T> : Parameter<'T> -> 'T
+    abstract Parameters : Parameters
 
 [<Sealed>]
 type Parameter =

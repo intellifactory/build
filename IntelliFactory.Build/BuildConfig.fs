@@ -43,3 +43,6 @@ module BuildConfig =
 
     let ProjectName =
         Parameter.Create "Library"
+
+    let AppDomain =
+        Parameter.Create AppDomain.CurrentDomain

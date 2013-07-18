@@ -54,6 +54,11 @@ type ReferenceBuilder =
 
 [<Sealed>]
 type References =
+
+    /// Resolves a path to a NuGet-supplied executable under a `tools` folder, such
+    /// as `WebSharper.exe`.
+    member FindTool : ResolvedReferences -> Framework -> fileName: string -> option<string>
+
     member GetNuGetReference : Reference -> option<NuGetReference>
     member Resolve : Framework -> seq<Reference> -> ResolvedReferences
     member ResolveProjectReferences : seq<Reference> -> ResolvedReferences -> ResolvedReferences

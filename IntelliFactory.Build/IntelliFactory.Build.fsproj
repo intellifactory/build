@@ -63,6 +63,7 @@
     <Compile Include="WebSharper.fs" />
     <Compile Include="NuGetPackage.fsi" />
     <Compile Include="NuGetPackage.fs" />
+    <Compile Include="ConsoleProgram.fs" />
     <Compile Include="BuildTool.fs" />
     <Compile Include="FSharpInteractiveTask.fs" />
     <Compile Include="Annotations.fs" />

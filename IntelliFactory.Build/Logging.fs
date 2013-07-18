@@ -246,6 +246,7 @@ type Log(name: Name, env: Parameters) =
 
     interface IParametric with
         member l.Find p = p.Find env
+        member l.Parameters = env
 
     interface IParametric<Log> with
         member l.Custom p v = Log(name, p.Custom v env)
@@ -319,8 +320,8 @@ type Log(name: Name, env: Parameters) =
     member this.Warn(m, [<A>] xs) =
         this.Trace(WarnLevel, m, xs)
 
-    static member Create(name, env) =
-        Log(Name.Parse name, env)
+    static member Create(name, env: IParametric) =
+        Log(Name.Parse name, env.Parameters)
 
-    static member Create<'T>(env) =
-        Log.Create(typeof<'T>.FullName, env)
+    static member Create<'T>(env: IParametric) =
+        Log.Create(typeof<'T>.FullName, env.Parameters)

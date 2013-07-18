@@ -23,6 +23,7 @@ type BuildTool(?env) =
         | Some env -> env
 
     let fsharp = FSharpProjects.Current.Find env
+    let websharper = WebSharperProjects.Current.Find env
     let ng = NuGetPackageTool.Current.Find env
     let log = Log.Create<BuildTool>(env)
     let rb = ReferenceBuilder.Current.Find env
@@ -34,6 +35,7 @@ type BuildTool(?env) =
 
     interface IParametric with
         member t.Find p = p.Find env
+        member t.Parameters = env
 
     interface IParametric<BuildTool> with
         member t.Custom p v = BuildTool(p.Custom v env)
@@ -83,7 +85,5 @@ type BuildTool(?env) =
         BuildConfig.CurrentFramework.Custom fw bt
 
     member bt.Reference = rb
-
-    member bt.Solution projects =
-        sln.Solution projects
-
+    member bt.Solution projects = sln.Solution projects
+    member bt.WebSharper = websharper

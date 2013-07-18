@@ -146,9 +146,9 @@ type Log =
     member Warn : string * [<ParamArray>] args: obj [] -> unit
 
     /// Creates a log, inferring the name from the given type.
-    static member Create<'T> : Parameters -> Log
+    static member Create<'T> : IParametric -> Log
 
     /// Creates a new log with a dotted hierarhical name, as in:
     /// `Log.Create("IntelliFactory.My.Module")`.
-    static member Create : name: string * Parameters -> Log
+    static member Create : name: string * IParametric -> Log
 

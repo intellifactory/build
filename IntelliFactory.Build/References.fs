@@ -471,10 +471,13 @@ type References private (env: Parameters) =
         |> nSet.WithReferences
 
     member rs.ResolveProjectReferences refs (rr: ResolvedReferences) =
+        log.Verbose("ResolveProjectReferences")
         seq {
             for r in refs do
                 match r with
-                | ProjectRef p -> yield! p.GeneratedAssemblyFiles
+                | ProjectRef p ->
+                    log.Verbose("    {0} -> {1}", p.Name, String.concat "; " p.GeneratedAssemblyFiles)
+                    yield! p.GeneratedAssemblyFiles
                 | _ -> ()
         }
         |> Seq.append rr.Paths

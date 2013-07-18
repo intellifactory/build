@@ -25,6 +25,10 @@ val DefaultEncoding : Encoding
 [<Sealed>]
 type Binary =
 
+    /// Writes to a given file if its contents are different,
+    /// returns whether an actual write was performed.
+    member EnsureFile : fullPath: string -> bool
+
     /// Reads content as a byte array.
     member GetBytes : unit -> byte []
 
@@ -50,6 +54,10 @@ type Binary =
 type Content =
     | BinaryContent of Binary
     | TextContent of string
+
+    /// Writes to a given file if its contents are different,
+    /// returns whether an actual write was performed.
+    member EnsureFile : fullPath: string -> bool
 
     /// Writes to a given file.
     member WriteFile : fullPath: string -> unit

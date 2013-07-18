@@ -27,6 +27,7 @@ open NuGet
 #load "IntelliFactory.Build/References.fs"
 #load "IntelliFactory.Build/Solutions.fs"
 #load "IntelliFactory.Build/FSharp.fs"
+#load "IntelliFactory.Build/WebSharper.fs"
 #load "IntelliFactory.Build/NuGetPackage.fs"
 #load "IntelliFactory.Build/BuildTool.fs"
 
@@ -35,7 +36,9 @@ open IntelliFactory.Build
 let bt =
     BuildTool()
         .PackageId("IntelliFactory.Build", "0.2")
-        .Configure(fun bt -> bt.WithFramework(bt.Framework.Net40))
+        .Configure(fun bt ->
+            bt.WithFramework(bt.Framework.Net40)
+            |> LogConfig.Current.Custom (LogConfig().Verbose().ToConsole()))
         .WithCommandLineArgs()
 
 let buildLib =
@@ -53,10 +56,20 @@ let buildLib =
                 rt.NuGet("DotNetZip").Version("1.9.1.8").Reference()
             ])
         .SourcesFromProject()
+        .Embed(["../tools/NuGet/NuGet.exe"])
+
+let buildTool =
+    bt.FSharp.ConsoleExecutable("IB")
+        .References(fun rt ->
+            [
+                rt.Project(buildLib)
+            ])
+        .SourcesFromProject()
 
 bt.Solution [
 
     buildLib
+    buildTool
 
     bt.NuGet.CreatePackage()
         .Description("Provides utilities for build automation, \
