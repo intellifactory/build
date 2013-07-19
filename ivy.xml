@@ -1,3 +1,3 @@
 <ivy-module version="2.0">
-  <info organisation="IntelliFactory" module="build" />
+  <info organisation="IntelliFactory" module="build" revision="1.0" />
 </ivy-module>
