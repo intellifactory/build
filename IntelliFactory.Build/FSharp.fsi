@@ -61,6 +61,12 @@ type internal FSharpCompilerTask =
     member Arguments : seq<string>
     member ToolPath : string
 
+/// Internal utility for generating F# projects.
+[<Sealed>]
+type internal FSharpProjectWriter =
+    new : IParametric -> FSharpProjectWriter
+    member Write : ResolvedReferences -> unit
+
 /// Represents an F# project building a single assembly.
 [<Sealed>]
 type FSharpProject =

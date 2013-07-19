@@ -101,7 +101,8 @@ type FSharpProjectParser(env: Parameters) =
         |> Reify
 
 [<Sealed>]
-type FSharpProjectWriter(env) =
+type FSharpProjectWriter(x: IParametric) =
+    let env = x.Parameters
     let log = Log.Create<FSharpProjectWriter>(env)
     let path = FSharpConfig.ReferenceProjectPath.Find env
     let rootDir = BuildConfig.RootDir.Find env

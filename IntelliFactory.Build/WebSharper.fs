@@ -70,7 +70,13 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let name = BuildConfig.ProjectName.Find fs
     let dom = BuildConfig.AppDomain.Find fs
     let snk = BuildConfig.KeyFile.Find fs
-    let sourceFiles = FSharpConfig.Sources.Find fs |> Seq.toList
+    let baseDir = FSharpConfig.BaseDir.Find fs
+
+    let sourceFiles =
+        FSharpConfig.Sources.Find fs
+        |> Seq.map (fun f -> Path.Combine(baseDir, f))
+        |> Seq.toList
+
     let project = fs :> IProject
 
     let aid =
@@ -204,6 +210,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let build rr =
         if requiresBuild rr then
             clean ()
+            FSharpProjectWriter(fs).Write(rr)
             build1 rr
             build2 rr
             build3 rr
