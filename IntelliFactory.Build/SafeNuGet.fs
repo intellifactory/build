@@ -3,6 +3,7 @@
 open System
 open System.IO
 open System.Runtime.CompilerServices
+open System.Runtime.Versioning
 open System.Security
 
 #if INTERACTIVE
@@ -76,6 +77,23 @@ type SafeNuGetFrameworkAssemblyReference(r: FrameworkAssemblyReference) =
     member s.SupportedFrameworks = r.SupportedFrameworks
 
 [<Sealed>]
+[<SecurityCritical>]
+type SafeNuGetBasicPackageFile(f: INuGetFile, fw: FrameworkName) =
+    let path = f.TargetPath
+
+    interface IFrameworkTargetable with
+        member p.SupportedFrameworks with [<SecurityCritical>] get () = Seq.singleton fw
+
+    interface IPackageFile with
+
+        [<SecurityCritical>]
+        member p.GetStream() = f.Read()
+
+        member p.EffectivePath with [<SecurityCritical>] get () = path
+        member p.Path with [<SecurityCritical>] get () = path
+        member p.TargetFramework with [<SecurityCritical>] get () = fw
+
+[<Sealed>]
 [<SecuritySafeCritical>]
 type SafeNuGetPackageFile(p: IPackageFile) =
     member s.EffectivePath = p.EffectivePath
@@ -86,6 +104,9 @@ type SafeNuGetPackageFile(p: IPackageFile) =
 
     static member Create(source, target) =
         SafeNuGetPackageFile(PhysicalPackageFile(SourcePath = source, TargetPath = target))
+
+    static member Create(fw, f) =
+        SafeNuGetPackageFile(SafeNuGetBasicPackageFile(f, fw) :> IPackageFile)
 
 [<Sealed>]
 [<SecuritySafeCritical>]

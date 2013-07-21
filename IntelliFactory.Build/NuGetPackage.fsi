@@ -28,9 +28,13 @@ type NuGetPackageBuilder =
     interface IProject
 
     /// Adds NuGet references for a given project as package references.
-    /// If the project implements `INuGetExportingProject`,
-    /// adds the project exports to the NuGet package files.
-    member Add : IProject -> NuGetPackageBuilder
+    member AddProject : IProject -> NuGetPackageBuilder
+
+    /// Adds project exports to the NuGet package files.
+    member AddNuGetExportingProject : INuGetExportingProject -> NuGetPackageBuilder
+
+    /// Combines the previous two overloads.
+    member Add<'T when 'T :> IProject and 'T :> INuGetExportingProject> : 'T -> NuGetPackageBuilder
 
     /// Confgures package license to point to Apache 2.0.
     member Apache20License : unit -> NuGetPackageBuilder

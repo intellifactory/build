@@ -38,6 +38,7 @@ type internal SafeNuGetPackageFile =
     member SupportedFrameworks : seq<FrameworkName>
     member TargetFramework : option<FrameworkName>
     static member Create : sourcePath: string * targetPath: string -> SafeNuGetPackageFile
+    static member Create : FrameworkName * INuGetFile -> SafeNuGetPackageFile
 
 [<Sealed>]
 type internal SafeNuGetPackage =

@@ -218,7 +218,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             log.Info("Skipping {0}", project.Name)
 
     interface INuGetExportingProject with
-        member p.LibraryFiles = (fs :> INuGetExportingProject).LibraryFiles
+        member p.NuGetFiles = (fs :> INuGetExportingProject).NuGetFiles
 
     interface IProject with
         member p.Build(rr) = build rr

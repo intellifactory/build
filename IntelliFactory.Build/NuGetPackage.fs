@@ -44,7 +44,7 @@ type NuGetPackageConfig =
 
 type NuGetPackageSettings =
     {
-        Contents : list<SafeNuGetPackageFile>
+        Contents : list<INuGetFile>
         PackageConfig : NuGetPackageConfig
     }
 
@@ -55,29 +55,22 @@ type NuGetPackageBuilder(settings, env) =
     let cfg = settings.PackageConfig
     let upd cfg = NuGetPackageBuilder({ settings with PackageConfig = cfg }, env )
 
-    member p.Add(pr: IProject) =
+    member p.AddNuGetExportingProject(proj: INuGetExportingProject) =
+        let settings = { settings with Contents = settings.Contents @ Seq.toList proj.NuGetFiles }
+        NuGetPackageBuilder(settings, env)
+
+    member p.AddProject(pr: IProject) =
         let ng =
             pr.References
             |> Seq.choose rs.GetNuGetReference
             |> Seq.append cfg.NuGetReferences
             |> Seq.distinct
             |> Seq.toList
-        let fs =
-            [
-                match pr with
-                | :? INuGetExportingProject as proj ->
-                    for f in proj.LibraryFiles do
-                        let t = Path.Combine("lib", pr.Framework.Name, Path.GetFileName f)
-                        yield SafeNuGetPackageFile.Create(f, t)
-                | _ -> ()
-            ]
-        let settings =
-            {
-                settings with
-                    Contents = settings.Contents @ fs
-                    PackageConfig = { settings.PackageConfig with NuGetReferences = ng }
-            }
+        let settings = { settings with PackageConfig = { settings.PackageConfig with NuGetReferences = ng } }
         NuGetPackageBuilder(settings, env)
+
+    member p.Add<'T when 'T :> IProject and 'T :> INuGetExportingProject>(x: 'T) =
+        p.AddProject(x :> IProject).AddNuGetExportingProject(x :> INuGetExportingProject)
 
     member p.Apache20License() =
         upd (cfg.WithApache20License())
@@ -94,7 +87,13 @@ type NuGetPackageBuilder(settings, env) =
         pb.Authors <- cfg.Authors
         pb.Description <- cfg.Description
         pb.Version <- SafeNuGetSemanticVersion(cfg.Version, ?suffix = cfg.VersionSuffix)
-        pb.Files <- settings.Contents
+        let fw = BuildConfig.CurrentFramework.Find env
+        let fwt = Frameworks.Current.Find env
+        pb.Files <-
+            [
+                for f in settings.Contents ->
+                    SafeNuGetPackageFile.Create(fwt.ToFrameworkName fw, f)
+            ]
         pb.DependencySets <-
             let deps =
                 cfg.NuGetReferences

@@ -305,12 +305,17 @@ type FSharpProject(env: Parameters) =
     let name = BuildConfig.ProjectName.Find env
     let b = lazy FSharpProjectBuilder(env, log)
     let pP = lazy FSharpProjectParser(env)
+    let fw = BuildConfig.CurrentFramework.Find env
 
     let appendParameters (par: Parameter<_>) xs ps =
         par.Custom (Reify (Seq.append (par.Find env) xs)) ps
 
     interface INuGetExportingProject with
-        member p.LibraryFiles = b.Value.LibraryFiles
+        member p.NuGetFiles =
+            seq {
+                for file in b.Value.LibraryFiles do
+                    yield NuGetFile.LibraryFile(fw, file)
+            }
 
     interface IParametric with
         member fp.Find p = p.Find env
