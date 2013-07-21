@@ -44,7 +44,7 @@ type NuGetPackageConfig =
 
 type NuGetPackageSettings =
     {
-        Contents : list<INuGetFile>
+        Contents : seq<INuGetFile>
         PackageConfig : NuGetPackageConfig
     }
 
@@ -56,7 +56,7 @@ type NuGetPackageBuilder(settings, env) =
     let upd cfg = NuGetPackageBuilder({ settings with PackageConfig = cfg }, env )
 
     member p.AddNuGetExportingProject(proj: INuGetExportingProject) =
-        let settings = { settings with Contents = settings.Contents @ Seq.toList proj.NuGetFiles }
+        let settings = { settings with Contents = Seq.append settings.Contents proj.NuGetFiles }
         NuGetPackageBuilder(settings, env)
 
     member p.AddProject(pr: IProject) =
