@@ -14,12 +14,30 @@
 
 namespace IntelliFactory.Build
 
+open System
+open System.Collections
+open System.Collections.Generic
+
+/// Represents an abstract assembly reference.
 [<Sealed>]
 type Reference
 
+/// Represents a resolved reference to an assembly.
+[<Sealed>]
+type ResolvedReference =
+    interface IComparable
+
+    /// Tests it the reference comes from the framework, as opposed to `NuGet`.
+    member IsFrameworkReference : bool
+
+    /// Full path to the resolved reference file.
+    member Path : string
+
+/// Represents a set of resolved assembly references.
 [<Sealed>]
 type ResolvedReferences =
     member Paths : seq<string>
+    member References : seq<ResolvedReference>
     static member Empty : ResolvedReferences
 
 type IProject =

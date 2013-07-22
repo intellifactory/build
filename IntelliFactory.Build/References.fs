@@ -25,6 +25,20 @@ open System.Security
 open IntelliFactory.Build
 #endif
 
+type ResolvedReference =
+    | ResolvedRef of string
+    | ResolvedFrameworkRef of string
+
+    member rr.IsFrameworkReference =
+        match rr with
+        | ResolvedFrameworkRef _ -> true
+        | _ -> false
+
+    member rr.Path =
+        match rr with
+        | ResolvedRef p
+        | ResolvedFrameworkRef p -> p
+
 type PackageSet =
     Dictionary<string,SafeNuGetPackage>
 
@@ -75,11 +89,12 @@ and IProject =
 and ResolvedReferences =
     {
         pack : PackageSet
-        refs : seq<string>
+        refs : seq<ResolvedReference>
     }
 
-    member this.Paths = this.refs
-    member this.WithReferences(refs) = { this with refs = refs }
+    member rr.Paths = seq { for r in rr.refs -> r.Path }
+    member rr.References = rr.refs
+    member rr.WithReferences(refs) = { rr with refs = refs }
 
     static member Empty =
         {
@@ -184,6 +199,7 @@ type SystemResolver private (env) =
 
     member this.Resolve fw (name: AssemblyName) =
         Seq.tryPick (inDir name) (paths fw)
+        |> Option.map (fun p -> ResolvedFrameworkRef p)
 
     static member Current = current
 
@@ -195,9 +211,11 @@ type FitnessScore =
 module AssemblySets =
 
     /// TODO: can detect version conflicts and missing refs here.
-    let buildAssemblySet (files: seq<string>) =
+    let buildAssemblySet (files: seq<ResolvedReference>) =
         files
-        |> Seq.distinctBy (fun f -> AssemblyName.GetAssemblyName f |> string)
+        |> Seq.distinctBy (fun f ->
+            let n = AssemblyName.GetAssemblyName f.Path
+            n |> string)
         |> Reify
 
 [<Sealed>]
@@ -223,6 +241,7 @@ type NuGetResolver private (env) =
         |> Option.bind (fun pkgDir ->
             let file = repo +/ pkgDir +/ p
             if IsFile file then Some file else None)
+        |> Option.map (fun p -> ResolvedRef p)
 
     let bestFit getTarget getSupported fw (xs: seq<'T>) : option<'T> =
 
@@ -451,6 +470,7 @@ type References private (env: Parameters) =
 
     member rs.FindTool r fw name =
         ngrt.FindTool r fw name
+        |> Option.map (fun t -> t.Path)
 
     member rs.Resolve fw refs =
         let nSet =
@@ -459,13 +479,13 @@ type References private (env: Parameters) =
                 | NuGetRef r -> Some r
                 | _ -> None)
             |> ngrt.Resolve fw
-        Seq.append nSet.Paths
+        Seq.append nSet.refs
             ([|
                 for r in Seq.append refs (baseSet fw) do
                     match r with
                     | NuGetRef _ -> ()
                     | FileRef p ->
-                        yield p
+                        yield ResolvedRef p
                     | ProjectRef _ ->
                         ()
                     | SystemRef r ->
@@ -477,16 +497,15 @@ type References private (env: Parameters) =
         |> nSet.WithReferences
 
     member rs.ResolveProjectReferences refs (rr: ResolvedReferences) =
-        log.Verbose("ResolveProjectReferences")
         seq {
             for r in refs do
                 match r with
                 | ProjectRef p ->
-                    log.Verbose("    {0} -> {1}", p.Name, String.concat "; " p.GeneratedAssemblyFiles)
-                    yield! p.GeneratedAssemblyFiles
+                    for file in p.GeneratedAssemblyFiles do
+                        yield ResolvedRef file
                 | _ -> ()
         }
-        |> Seq.append rr.Paths
+        |> Seq.append rr.refs
         |> buildAssemblySet
         |> rr.WithReferences
 

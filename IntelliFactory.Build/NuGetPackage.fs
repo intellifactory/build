@@ -105,7 +105,7 @@ type NuGetPackageBuilder(settings, env) =
                     SafeNuGetPackageDependency(r.Id, ?ver = v))
             [SafeNuGetPackageDependencySet.Create(deps)]
         PrepareDir cfg.OutputPath
-        use out = File.Open(cfg.OutputPath, FileMode.Create, FileAccess.ReadWrite)
+        use out = File.Open(cfg.OutputPath, FileMode.Create)
         pb.Save(out)
 
     member p.Clean() =

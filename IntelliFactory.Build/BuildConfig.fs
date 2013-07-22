@@ -13,7 +13,7 @@ module BuildConfig =
         Parameter.Define(fun env -> Frameworks.Current.Find(env).Net45)
 
     let RootDir =
-        Parameter.Create "."
+        Parameter.Create (Directory.GetCurrentDirectory())
 
     let BuildDir =
         Parameter.Define(fun env ->

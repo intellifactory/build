@@ -22,6 +22,7 @@ open System
 open System.Diagnostics
 open System.IO
 open System.Reflection
+open System.Security
 open System.Xml
 open System.Xml.Linq
 module XG = IntelliFactory.Build.XmlGenerator
@@ -88,7 +89,7 @@ module FSharpConfig =
         Parameter.Create Seq.empty
 
 [<Sealed>]
-type FSharpProjectParser(env: Parameters) =
+type FSharpProjectParser(env: IParametric) =
 
     member p.Parse(msbFile: string, baseDir: string) =
         let doc = XDocument.Load(msbFile)
@@ -333,66 +334,45 @@ type FSharpProject(env: Parameters) =
         member p.Name = b.Value.Name
         member p.References = b.Value.References
 
-    interface IFSharpProjectContainer<FSharpProject> with
-        member x.FSharpProject = x
-        member x.WithFSharpProject p = p
-
-    member p.WithModules ms =
-        let sources =
-            [
-                for m in ms do
-                    yield m + ".fsi"
-                    yield m + ".fs"
-            ]
-            |> List.filter (fun path ->
-                Path.Combine(baseDir, path)
-                |> IsFile)
-        appendParameters FSharpConfig.Sources sources p
-
-    member p.WithReferences f =
-        let rB = ReferenceBuilder.Current.Find env
-        appendParameters FSharpConfig.References (f rB) p
-
-    member p.WithEmbeddedResources rs =
-        appendParameters FSharpConfig.EmbeddedResources rs p
-
-    member p.WithSources sources =
-        appendParameters FSharpConfig.Sources sources p
-
-    member p.WithSourcesFromProject(?msbuildProject) =
-        let msbp = defaultArg msbuildProject (name + ".fsproj")
-        let msb = Path.GetFullPath(Path.Combine(baseDir, msbp))
-        pP.Value.Parse(msb, baseDir)
-        |> p.WithSources
-
-and IFSharpProjectContainer<'T> =
-    abstract FSharpProject : FSharpProject
-    abstract WithFSharpProject : FSharpProject -> 'T
-
 [<AutoOpen>]
 module FSharpProjectExtensinos =
 
-    type IFSharpProjectContainer<'T> with
+    let appendParameters (par: Parameter<seq<'T>>) xs ps =
+        par.Custom (Reify (Seq.append (par.Find ps) xs)) ps
 
-        member x.Embed rs =
-            x.FSharpProject.WithEmbeddedResources rs
-            |> x.WithFSharpProject
+    type IParametric<'T> with
 
-        member x.Modules ms =
-            x.FSharpProject.WithModules(ms)
-            |> x.WithFSharpProject
+        member p.References f =
+            let rB = ReferenceBuilder.Current.Find p
+            appendParameters FSharpConfig.References (f rB) p
 
-        member x.References f =
-            x.FSharpProject.WithReferences(f)
-            |> x.WithFSharpProject
+        member p.Embed rs =
+            appendParameters FSharpConfig.EmbeddedResources rs p
 
-        member x.Sources xs =
-            x.FSharpProject.WithSources(xs)
-            |> x.WithFSharpProject
+        member p.Sources ss =
+            appendParameters FSharpConfig.Sources ss p
 
-        member x.SourcesFromProject(?msbuildProject) =
-            x.FSharpProject.WithSourcesFromProject(?msbuildProject = msbuildProject)
-            |> x.WithFSharpProject
+        member p.Modules ms =
+            let baseDir = FSharpConfig.BaseDir.Find p
+            let sources =
+                [
+                    for m in ms do
+                        yield m + ".fsi"
+                        yield m + ".fs"
+                ]
+                |> List.filter (fun path ->
+                    Path.Combine(baseDir, path)
+                    |> IsFile)
+            appendParameters FSharpConfig.Sources sources p
+
+        member p.SourcesFromProject(?msbuildProject) =
+            let name = BuildConfig.ProjectName.Find p
+            let baseDir = FSharpConfig.BaseDir.Find p
+            let msbp = defaultArg msbuildProject (name + ".fsproj")
+            let msb = Path.GetFullPath(Path.Combine(baseDir, msbp))
+            let pP = FSharpProjectParser(p)
+            pP.Parse(msb, baseDir)
+            |> p.Sources
 
 [<Sealed>]
 type FSharpInteractive(env) =
@@ -429,6 +409,7 @@ type FSharpInteractive(env) =
         let includesFile = Path.Combine(root, "build", Path.ChangeExtension(Path.GetFileName scriptFile, ".includes.fsx"))
         FileSystem.TextContent(t).WriteFile(includesFile)
 
+    [<SecurityCritical>]
     member i.ExecuteScript(scriptPath: string, ?refs: ResolvedReferences, ?args: seq<string>) =
         match refs with
         | None -> ()
@@ -479,6 +460,7 @@ type FSharpTool(env) =
     member t.WindowsExecutable name =
         create FSharpWindowsExecutable name
 
+    [<SecurityCritical>]
     member t.ExecuteScript(scriptPath, ?refs, ?args) =
         fsi.ExecuteScript(scriptPath, ?refs = refs, ?args = args)
 

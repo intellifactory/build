@@ -61,16 +61,52 @@ type WebSharperProjectConfig =
     }
 
 [<Sealed>]
+type WebSharperUtility(env: IParametric, log: Log) =
+    let wsHome = WebSharperConfig.WebSharperHome.Find env
+    let dom = BuildConfig.AppDomain.Find env
+    let rt = References.Current.Find env
+    let fw = BuildConfig.CurrentFramework.Find env
+
+    let wsToolPath (rr: ResolvedReferences) =
+        match wsHome with
+        | None ->
+            let tool = rt.FindTool rr fw "WebSharper.exe"
+            match tool with
+            | None ->
+                failwithf "Could not locate WebSharper.exe - \
+                    consider setting WebSharperHome"
+            | Some t -> t
+        | Some x -> Path.Combine(x, "WebSharper.exe")
+
+    member u.Execute(exe: string, args: seq<string>) =
+        let msg =
+            seq {
+                yield exe
+                for a in args do
+                    yield "    " + a
+            }
+            |> String.concat Environment.NewLine
+        log.Verbose(msg)
+        match dom.ExecuteAssembly(exe, Seq.toArray args) with
+        | 0 -> ()
+        | n -> failwithf "Non-zero exit code: %i" n
+
+    member u.ExecuteWebSharper(rr, args) =
+        let exe = wsToolPath rr
+        u.Execute(exe, args)
+
+    member u.Home = wsHome
+
+[<Sealed>]
 type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let log = Log.Create<WebSharperProject>(fs)
     let aig = AssemblyInfoGenerator.Current.Find fs
     let rt = References.Current.Find fs
     let fw = BuildConfig.CurrentFramework.Find fs
-    let wsHome = WebSharperConfig.WebSharperHome.Find fs
     let name = BuildConfig.ProjectName.Find fs
-    let dom = BuildConfig.AppDomain.Find fs
     let snk = BuildConfig.KeyFile.Find fs
     let baseDir = FSharpConfig.BaseDir.Find fs
+    let util = WebSharperUtility(fs, log)
 
     let sourceFiles =
         FSharpConfig.Sources.Find fs
@@ -86,17 +122,6 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             |> OrElse (Some name)
         { d with Title = t }
 
-    let wsToolPath rr =
-        match wsHome with
-        | None ->
-            let tool = rt.FindTool rr fw "WebSharper.exe"
-            match tool with
-            | None ->
-                failwithf "Could not locate WebSharper.exe - \
-                    consider setting WebSharperHome"
-            | Some t -> t
-        | Some x -> Path.Combine(x, "WebSharper.exe")
-
     let docPath = FSharpConfig.DocPath.Find fs
     let outputPath = FSharpConfig.OutputPath.Find fs
     let outputPath1 = Path.ChangeExtension(outputPath, ".Generator.exe")
@@ -104,22 +129,6 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let ainfoPath = Path.ChangeExtension(outputPath, ".annotations.fs")
     let argsPath = Path.ChangeExtension(outputPath, ".args.txt")
     let ver = PackageVersion.Current.Find fs
-
-    let exec (exe: string) (args: seq<string>) =
-        let msg =
-            seq {
-                yield "ExecuteAssembly: " + exe
-                for a in args do
-                    yield "    " + a
-            }
-            |> String.concat Environment.NewLine
-        log.Verbose(msg)
-        match dom.ExecuteAssembly(exe, Seq.toArray args) with
-        | 0 -> ()
-        | n -> failwithf "Non-zero exit code: %i" n
-
-    let execWS rr args =
-        exec (wsToolPath rr) args
 
     let inputFiles (rr: ResolvedReferences) =
         ainfoPath
@@ -168,35 +177,54 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         | WebSharperExtension ->
             env
             |> FSharpConfig.OutputPath.Custom outputPath1
-            |> FSharpConfig.Kind.Custom FSharpWindowsExecutable
+            |> FSharpConfig.Kind.Custom FSharpConsoleExecutable
             |> buildFS rr
 
     let build2 (rr: ResolvedReferences) =
         match cfg.Kind with
         | WebSharperLibrary -> ()
         | WebSharperExtension ->
-            exec outputPath1 [
-                yield "-n:" + name
-                yield "-o:" + outputPath2
-                yield "-v:" + string (Version (ver.Major, ver.Minor, 0, 0))
-                match docPath with
-                | None -> ()
-                | Some doc -> yield "-doc:" + doc
+            let searchDirs =
+                Seq.distinct [
+                    for r in rr.Paths do
+                        yield Path.GetFullPath (Path.GetDirectoryName r)
+                ]
+            let aR =
+                AssemblyResolver.Fallback(AssemblyResolver.SearchDomain(),
+                    AssemblyResolver.SearchPaths searchDirs)
+            aR.With() <| fun () ->
+                util.Execute(outputPath1,
+                    [
+                        yield outputPath1
+                        yield "-n:" + name
+                        yield "-o:" + outputPath2
+                        yield "-v:" + string (Version (ver.Major, ver.Minor, 0, 0))
+                        match docPath with
+                        | None -> ()
+                        | Some doc -> yield "-doc:" + doc
+                        match snk with
+                        | None -> ()
+                        | Some snk -> yield "-snk:" + snk
+                        for r in rr.Paths do
+                            yield "-r:" + r
+                        for res in FSharpConfig.EmbeddedResources.Find fs do
+                            yield "-embed:" + Path.GetFullPath(Path.Combine(baseDir, res))
+                    ])
+
+    let build3 (rr: ResolvedReferences) =
+        util.ExecuteWebSharper(rr,
+            [
                 match snk with
                 | None -> ()
-                | Some snk -> yield "-snk:" + snk
-                for r in rr.Paths do
-                    yield "-r:" + r
-            ]
-
-    let build3 rr =
-        execWS rr [
-            for p in rr.Paths do
-                yield "-r"
-                yield p
-            yield outputPath2
-            yield outputPath
-        ]
+                | Some snk ->
+                    yield "-snk"
+                    yield snk
+                for p in rr.Paths do
+                    yield "-r"
+                    yield p
+                yield outputPath2
+                yield outputPath
+            ])
 
     let rm x =
         if IsFile x then
@@ -228,16 +256,60 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         member p.Name = project.Name
         member p.References = project.References
 
-    interface IFSharpProjectContainer<WebSharperProject> with
-        member p.FSharpProject = fs
-        member p.WithFSharpProject fs = WebSharperProject(cfg, fs)
-
     interface IParametric with
         member x.Find p = p.Find fs
         member x.Parameters = Parameters.Get fs
 
     interface IParametric<WebSharperProject> with
         member x.Custom p v = WebSharperProject(cfg, p.Custom v fs)
+
+[<Sealed>]
+type WebSharperHostWebsite(env: IParametric) =
+    let log = Log.Create<WebSharperHostWebsite>(env)
+    let util = WebSharperUtility(env, log)
+    let name = BuildConfig.ProjectName.Find env
+    let fw = BuildConfig.CurrentFramework.Find env
+    let refs = FSharpConfig.References.Find env
+    let baseDir = FSharpConfig.BaseDir.Find env
+    let binDir = Path.Combine(baseDir, "bin")
+    let scriptsFolder = Path.Combine(baseDir, "Scripts")
+
+    interface IProject with
+
+        member h.Build(rr) =
+            let refs = ResizeArray()
+            for p in rr.Paths do
+                match Path.GetFileName(p) with
+                | "mscorlib.dll"
+                | "System.dll"
+                | "System.Core.dll"
+                | "System.Numerics.dll"
+                | "System.Web.dll" -> ()
+                | _ ->
+                    let fc = FileSystem.Content.ReadBinaryFile p
+                    fc.WriteFile(Path.Combine(binDir, Path.GetFileName p))
+                    refs.Add p
+            util.ExecuteWebSharper(rr,
+                [
+                    yield "-unpack"
+                    yield scriptsFolder
+                    yield! refs
+                ])
+
+        member h.Clean() =
+            Directory.Delete(binDir, true)
+
+        member h.Framework = fw
+        member h.GeneratedAssemblyFiles = Seq.empty
+        member h.Name = name
+        member h.References = refs
+
+    interface IParametric with
+        member hw.Find p = p.Find env
+        member hw.Parameters = env.Parameters
+
+    interface IParametric<WebSharperHostWebsite> with
+        member hw.Custom p v = WebSharperHostWebsite(p.Custom v env.Parameters)
 
 [<Sealed>]
 type WebSharperProjects(env) =
@@ -251,6 +323,17 @@ type WebSharperProjects(env) =
 
     member ps.Extension name =
         make name { Kind = WebSharperExtension }
+
+    member ps.HostWebsite name =
+        let rs = WebSharperReferences.Compute(env)
+        let cfg =
+            fps.Library(name).References(fun r ->
+                [
+                    yield r.Assembly("System.Web")
+                    yield! rs
+                ])
+            |> BuildConfig.ProjectName.Custom name
+        WebSharperHostWebsite(cfg)
 
     member ps.Library name =
         make name { Kind = WebSharperLibrary }

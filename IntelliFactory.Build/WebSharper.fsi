@@ -7,14 +7,20 @@ module WebSharperConfig =
 
 [<Sealed>]
 type WebSharperProject =
-    interface IFSharpProjectContainer<WebSharperProject>
     interface INuGetExportingProject
     interface IParametric
     interface IParametric<WebSharperProject>
     interface IProject
 
 [<Sealed>]
+type WebSharperHostWebsite =
+    interface IParametric
+    interface IParametric<WebSharperHostWebsite>
+    interface IProject
+
+[<Sealed>]
 type WebSharperProjects =
     member Extension : name: string -> WebSharperProject
+    member HostWebsite : name: string -> WebSharperHostWebsite
     member Library : name: string -> WebSharperProject
     static member internal Current : Parameter<WebSharperProjects>

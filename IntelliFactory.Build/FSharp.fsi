@@ -70,19 +70,14 @@ type internal FSharpProjectWriter =
 /// Represents an F# project building a single assembly.
 [<Sealed>]
 type FSharpProject =
-    interface IFSharpProjectContainer<FSharpProject>
     interface INuGetExportingProject
     interface IParametric<FSharpProject>
     interface IProject
 
-and IFSharpProjectContainer<'T> =
-    abstract FSharpProject : FSharpProject
-    abstract WithFSharpProject : FSharpProject -> 'T
-
 [<AutoOpen>]
 module FSharpProjectExtensinos =
 
-    type IFSharpProjectContainer<'T> with
+    type IParametric<'T> with
 
         /// Adds resource files to embed.
         member Embed : seq<string> -> 'T

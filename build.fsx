@@ -27,6 +27,7 @@ open NuGet
 #load "IntelliFactory.Build/References.fs"
 #load "IntelliFactory.Build/Solutions.fs"
 #load "IntelliFactory.Build/FSharp.fs"
+#load "IntelliFactory.Build/AssemblyResolver.fs"
 #load "IntelliFactory.Build/WebSharper.fs"
 #load "IntelliFactory.Build/NuGetPackage.fs"
 #load "IntelliFactory.Build/BuildTool.fs"

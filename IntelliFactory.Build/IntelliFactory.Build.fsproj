@@ -59,6 +59,7 @@
     <Compile Include="Solutions.fs" />
     <Compile Include="FSharp.fsi" />
     <Compile Include="FSharp.fs" />
+    <Compile Include="AssemblyResolver.fs" />
     <Compile Include="WebSharper.fsi" />
     <Compile Include="WebSharper.fs" />
     <Compile Include="NuGetPackage.fsi" />
