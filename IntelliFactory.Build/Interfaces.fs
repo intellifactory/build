@@ -23,7 +23,7 @@ type NuGetFile =
     static member Local(sourcePath: string, targetPath: string) =
         {
             new INuGetFile with
-                member p.Read() = File.Open(sourcePath, FileMode.Open) :> Stream
+                member p.Read() = File.Open(sourcePath, FileMode.Open, FileAccess.ReadWrite) :> Stream
                 member p.TargetPath = targetPath
         }
 

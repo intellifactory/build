@@ -77,7 +77,7 @@ bt.Solution [
             without the need for MSBuild.")
         .ProjectUrl("http://bitbucket.com/IntelliFactory/build/")
         .Apache20License()
-        .Add(buildLib)
+        .Add<_>(buildLib)
 
 ]
 |> bt.Dispatch
