@@ -102,12 +102,15 @@ module FSharpProjectExtensinos =
         /// If no project file is given, infers it from the project name.
         member SourcesFromProject : ?msBuildProject: string -> 'T
 
-/// Constructs F# projects.
+/// F#-related build facilities.
 [<Sealed>]
-type FSharpProjects =
+type FSharpTool =
 
     /// Creates a console (exe) project.
     member ConsoleExecutable : name: string -> FSharpProject
+
+    /// Executs an F# script in a sub-process.
+    member ExecuteScript : scriptFile: string * ?refs: ResolvedReferences * ?args: seq<string> -> unit
 
     /// Creates a library project.
     member Library : name: string -> FSharpProject
@@ -116,4 +119,4 @@ type FSharpProjects =
     member WindowsExecutable : name: string -> FSharpProject
 
     /// Current `FSharpProjects` instance.
-    static member internal Current : Parameter<FSharpProjects>
+    static member internal Current : Parameter<FSharpTool>

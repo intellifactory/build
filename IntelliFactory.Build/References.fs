@@ -392,10 +392,16 @@ type NuGetResolver private (env) =
         let set =
             installPkgSet rs
             |> completePkgSet fw
+        let isImplicitAuto (pkg: SafeNuGetPackage) =
+            rs
+            |> Seq.forall (fun r -> r.Id <> pkg.Id)
         let refs =
             seq {
                 for r in rs do
                     yield! applyRule fw set r
+                for KeyValue (_, pkg) in set do
+                    if isImplicitAuto pkg then
+                        yield! resolveAutoRefs fw pkg
             }
             |> buildAssemblySet
         {

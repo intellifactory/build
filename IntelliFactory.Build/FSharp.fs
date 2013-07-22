@@ -19,6 +19,7 @@ open IntelliFactory.Build
 #endif
 
 open System
+open System.Diagnostics
 open System.IO
 open System.Reflection
 open System.Xml
@@ -394,8 +395,73 @@ module FSharpProjectExtensinos =
             |> x.WithFSharpProject
 
 [<Sealed>]
-type FSharpProjects(env) =
-    static let current = Parameter.Define(fun env -> FSharpProjects env)
+type FSharpInteractive(env) =
+    let fsHome = FSharpConfig.FSharpHome.Find env
+    let fsiToolPath = Path.Combine(fsHome, "fsiAnyCPU.exe")
+    let root = BuildConfig.RootDir.Find env
+
+    let quote (s: string) =
+        String.Format(@"""{0}""", s)
+
+    let fullPath s =
+        Path.Combine(root, s)
+        |> Path.GetFullPath
+
+    let quotedFullPath s =
+        fullPath s
+        |> quote
+
+    let buildReferences scriptFile refs =
+        let t =
+            [
+                for r in refs do
+                    let p = fullPath r
+                    match Path.GetFileName p with
+                    | "FSharp.Core.dll"
+                    | "System.Core.dll"
+                    | "System.dll"
+                    | "System.Numerics.dll"
+                    | "mscorlib.dll" -> ()
+                    | _ ->
+                         yield "#r @" + quote p
+            ]
+            |> String.concat Environment.NewLine
+        let includesFile = Path.Combine(root, "build", Path.ChangeExtension(Path.GetFileName scriptFile, ".includes.fsx"))
+        FileSystem.TextContent(t).WriteFile(includesFile)
+
+    member i.ExecuteScript(scriptPath: string, ?refs: ResolvedReferences, ?args: seq<string>) =
+        match refs with
+        | None -> ()
+        | Some refs -> buildReferences scriptPath refs.Paths
+        let args =
+            [
+                yield "--exec"
+                yield quotedFullPath scriptPath
+                yield! defaultArg args Seq.empty
+            ]
+            |> String.concat " "
+        /// TODO: better process management.
+        let psi = ProcessStartInfo(fsiToolPath, args)
+        psi.RedirectStandardError <- true
+        psi.RedirectStandardInput <- true
+        psi.RedirectStandardOutput <- true
+        psi.CreateNoWindow <- true
+        psi.UseShellExecute <- false
+        psi.WindowStyle <- ProcessWindowStyle.Hidden
+        let proc = Process.Start(psi)
+        proc.WaitForExit()
+        proc.StandardOutput.ReadToEnd()
+        |> stdout.Write
+        proc.StandardError.ReadToEnd()
+        |> stderr.Write
+        let exitCode = proc.ExitCode
+        if exitCode <> 0 then
+            failwithf "Non-zero exit code: %i" exitCode
+
+[<Sealed>]
+type FSharpTool(env) =
+    let fsi = FSharpInteractive env
+    static let current = Parameter.Define(fun env -> FSharpTool env)
 
     let create kind name =
         let env =
@@ -412,5 +478,8 @@ type FSharpProjects(env) =
 
     member t.WindowsExecutable name =
         create FSharpWindowsExecutable name
+
+    member t.ExecuteScript(scriptPath, ?refs, ?args) =
+        fsi.ExecuteScript(scriptPath, ?refs = refs, ?args = args)
 
     static member Current = current

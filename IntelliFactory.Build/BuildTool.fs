@@ -22,7 +22,7 @@ type BuildTool(?env) =
         | None -> getDefaultEnv ()
         | Some env -> env
 
-    let fsharp = FSharpProjects.Current.Find env
+    let fsharp = FSharpTool.Current.Find env
     let websharper = WebSharperProjects.Current.Find env
     let ng = NuGetPackageTool.Current.Find env
     let log = Log.Create<BuildTool>(env)

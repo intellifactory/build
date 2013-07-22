@@ -242,7 +242,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
 [<Sealed>]
 type WebSharperProjects(env) =
     static let current = Parameter.Define(fun env -> WebSharperProjects env)
-    let fps = FSharpProjects.Current.Find env
+    let fps = FSharpTool.Current.Find env
 
     let make name cfg =
         let rs = WebSharperReferences.Compute(env)
