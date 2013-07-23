@@ -2,10 +2,8 @@
 
 open System
 open System.IO
-
-#if INTERACTIVE
+open IntelliFactory.Core
 open IntelliFactory.Build
-#endif
 
 type Solution =
     {

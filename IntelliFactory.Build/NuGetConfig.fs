@@ -1,9 +1,7 @@
 ﻿namespace IntelliFactory.Build
 
-#if INTERACTIVE
 open IntelliFactory.Build
-#endif
-
+open IntelliFactory.Core
 open System
 open System.IO
 open System.Security

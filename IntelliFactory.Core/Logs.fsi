@@ -12,79 +12,68 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the License.
 
-/// Implements utilities for tracing on top of `System.Diagnostics.TraceSource`.
-namespace IntelliFactory.Build
+/// Log-related functionality.
+module IntelliFactory.Core.Logs
 
 open System
 open System.Diagnostics
 open System.IO
 
-/// Represents the level at which a message is being logged..
-[<Sealed>]
-type LogLevel =
-    interface IComparable
+/// Represents the level at which a message is being logged.
+type Level =
+    | Critical
+    | Error
+    | Warn
+    | Info
+    | Verbose
 
     /// The printable name.
     member Name : string
 
-    /// Critical level.
-    static member Critical : LogLevel
-
-    /// Error level.
-    static member Error : LogLevel
-
-    /// Informational level.
-    static member Info : LogLevel
-
-    /// Verbose level.
-    static member Verbose : LogLevel
-
-    /// Warning level.
-    static member Warn : LogLevel
-
-/// Represents a logger - a subscriber to the logging framework.
-type ILogger =
+/// Represents a subscriber to the logging framework.
+type ITrace =
 
     /// Decide if tracing at this level is supported.
-    abstract ShouldTrace : LogLevel -> bool
+    abstract ShouldTrace : Level -> bool
 
     /// Trace a message.
-    abstract Trace : LogLevel * string -> unit
+    abstract Trace : Level * string -> unit
 
 /// Abstract logging configuration.
-type ILogConfig =
+type IConfig =
 
     /// Get a logger for a given name.
-    abstract GetNamedLogger : string -> ILogger
+    abstract GetTrace : name: string -> ITrace
 
 /// Default logging configuration.
 [<Sealed>]
-type LogConfig =
-    interface ILogConfig
-    new : unit -> LogConfig
-    member Critical : unit -> LogConfig
-    member Critical : string -> LogConfig
-    member Default : LogLevel -> LogConfig
-    member Error : unit -> LogConfig
-    member Error : string -> LogConfig
-    member Info : unit -> LogConfig
-    member Info : string -> LogConfig
-    member Restrict : string * LogLevel -> LogConfig
-    member ToConsole : unit -> LogConfig
-    member ToDiagnostics : unit -> LogConfig
-    member ToTraceSource : TraceSource -> LogConfig
-    member Verbose : unit -> LogConfig
-    member Verbose : string -> LogConfig
-    member Warn : unit -> LogConfig
-    member Warn : string -> LogConfig
+type DefaultConfig =
+    interface IConfig
+    member Critical : unit -> DefaultConfig
+    member Critical : string -> DefaultConfig
+    member Default : Level -> DefaultConfig
+    member Error : unit -> DefaultConfig
+    member Error : string -> DefaultConfig
+    member Info : unit -> DefaultConfig
+    member Info : string -> DefaultConfig
+    member Restrict : string * Level -> DefaultConfig
+    member ToConsole : unit -> DefaultConfig
+    member ToDiagnostics : unit -> DefaultConfig
+    member ToTraceSource : TraceSource -> DefaultConfig
+    member Verbose : unit -> DefaultConfig
+    member Verbose : string -> DefaultConfig
+    member Warn : unit -> DefaultConfig
+    member Warn : string -> DefaultConfig
 
-    /// Current logging configuration.
-    static member Current : Parameter<ILogConfig>
+/// The parameter for passing logging configuration.
+val Config : Parameter<IConfig>
+
+/// The default configuration.
+val Default : DefaultConfig
 
 /// Implements support for hierarhical logging, similar to TraceSource.
 [<Sealed>]
 type Log =
-    interface IParametric
     interface IParametric<Log>
 
     /// Sends a Critical-level message.
@@ -115,13 +104,13 @@ type Log =
     member Info : string * [<ParamArray>] args: obj [] -> unit
 
     /// Sends a message at the specific level.
-    member Message : LogLevel * string -> unit
+    member Message : Level * string -> unit
 
     /// Sends a message at the specific level.
-    member Message : LogLevel * string * obj -> unit
+    member Message : Level * string * obj -> unit
 
     /// Sends a Warn-level message.
-    member Message : LogLevel * string * [<ParamArray>] args: obj [] -> unit
+    member Message : Level * string * [<ParamArray>] args: obj [] -> unit
 
     /// Creates a nested `Log`. If the current log is named "A.B", 
     /// `log.Nested("C")` will be named "A.B.C".
@@ -151,4 +140,3 @@ type Log =
     /// Creates a new log with a dotted hierarhical name, as in:
     /// `Log.Create("IntelliFactory.My.Module")`.
     static member Create : name: string * IParametric -> Log
-

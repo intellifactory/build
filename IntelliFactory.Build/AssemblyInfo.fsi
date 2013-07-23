@@ -2,6 +2,7 @@
 
 open System
 open System.Runtime.Versioning
+open IntelliFactory.Core
 
 [<Sealed>]
 type AssemblyInfoAttribute =

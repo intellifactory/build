@@ -1,5 +1,7 @@
 ﻿namespace IntelliFactory.Build
 
+open IntelliFactory.Core
+
 [<Sealed>]
 type NuGetConfig =
     static member CurrentSettings : Parameter<option<NuGet.ISettings>>

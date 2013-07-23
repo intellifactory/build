@@ -1,11 +1,9 @@
 ﻿namespace IntelliFactory.Build
 
-#if INTERACTIVE
-open IntelliFactory.Build
-#endif
-
 open System
 open System.IO
+open IntelliFactory.Build
+open IntelliFactory.Core
 
 type NuGetPackageConfig =
     {

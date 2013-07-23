@@ -12,24 +12,26 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the License.
 
-module IntelliFactory.Build.FileSystem
+module IntelliFactory.Core.FileSystem
 
 open System.IO
 open System.Text
 
 let DefaultEncoding =
-    UTF8Encoding(false) :> Encoding
+    let emitBOM = false
+    let throwOnError = true
+    UTF8Encoding(emitBOM, throwOnError) :> Encoding
 
-let FileExists (file: string) =
+let fileExists (file: string) =
     FileInfo(file).Exists
 
-let DirExists (path: string) =
+let dirExists (path: string) =
     DirectoryInfo(path).Exists
 
 let PrepareFileForWriting (fullPath: string) : unit =
     let fullPath = Path.GetFullPath fullPath
     let d = Path.GetDirectoryName fullPath
-    if not (DirExists d) then
+    if not (dirExists d) then
         ignore (Directory.CreateDirectory d)
 
 let EnsureBinaryFile (fullPath: string) (contents: byte []) : bool =
@@ -37,7 +39,7 @@ let EnsureBinaryFile (fullPath: string) (contents: byte []) : bool =
     let inline def () =
         File.WriteAllBytes(fullPath, contents)
         true
-    if FileExists fullPath
+    if fileExists fullPath
         then if File.ReadAllBytes fullPath <> contents then def () else false
         else def ()
 
@@ -46,7 +48,7 @@ let EnsureTextFile (fullPath: string) (contents: string) : bool =
     let inline def () =
         File.WriteAllText(fullPath, contents, DefaultEncoding)
         true
-    if FileExists fullPath
+    if fileExists fullPath
         then if File.ReadAllText fullPath <> contents then def () else false
         else def ()
 
@@ -84,6 +86,9 @@ type Content =
     member c.WriteFile p =
         c.EnsureFile p |> ignore
 
+    static member Binary b =
+        BinaryContent b
+
     static member ReadBinaryFile(p) =
         BinaryContent (Binary.ReadFile p)
 
@@ -91,3 +96,5 @@ type Content =
         File.ReadAllText(p, DefaultEncoding)
         |> TextContent
 
+    static member Text t =
+        TextContent t

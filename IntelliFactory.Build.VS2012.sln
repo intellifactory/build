@@ -14,6 +14,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "IntelliFactory.Build", "Int
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "IB", "IB\IB.fsproj", "{564EBBD5-F76F-4806-8B8E-B7DA4B65BC69}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "IntelliFactory.Core", "IntelliFactory.Core\IntelliFactory.Core.fsproj", "{D2BF6F2B-AE18-440C-B4EA-E975947275F5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +40,14 @@ Global
 		{564EBBD5-F76F-4806-8B8E-B7DA4B65BC69}.Release|Any CPU.Build.0 = Debug|Any CPU
 		{564EBBD5-F76F-4806-8B8E-B7DA4B65BC69}.Release-v4.0|Any CPU.ActiveCfg = Debug|Any CPU
 		{564EBBD5-F76F-4806-8B8E-B7DA4B65BC69}.Release-v4.0|Any CPU.Build.0 = Debug|Any CPU
+		{D2BF6F2B-AE18-440C-B4EA-E975947275F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2BF6F2B-AE18-440C-B4EA-E975947275F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2BF6F2B-AE18-440C-B4EA-E975947275F5}.Debug-v4.0|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2BF6F2B-AE18-440C-B4EA-E975947275F5}.Debug-v4.0|Any CPU.Build.0 = Debug|Any CPU
+		{D2BF6F2B-AE18-440C-B4EA-E975947275F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2BF6F2B-AE18-440C-B4EA-E975947275F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2BF6F2B-AE18-440C-B4EA-E975947275F5}.Release-v4.0|Any CPU.ActiveCfg = Release|Any CPU
+		{D2BF6F2B-AE18-440C-B4EA-E975947275F5}.Release-v4.0|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -5,12 +5,9 @@ open System.IO
 open System.Runtime.CompilerServices
 open System.Runtime.Versioning
 open System.Security
-
-#if INTERACTIVE
-open IntelliFactory.Build
-#endif
-
 open NuGet
+open IntelliFactory.Build
+open IntelliFactory.Core
 
 [<Sealed>]
 [<SecuritySafeCritical>]

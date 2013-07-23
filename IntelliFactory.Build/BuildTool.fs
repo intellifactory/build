@@ -1,10 +1,8 @@
 ﻿namespace IntelliFactory.Build
 
 open System
-
-#if INTERACTIVE
 open IntelliFactory.Build
-#endif
+open IntelliFactory.Core
 
 [<Sealed>]
 type BuildTool(?env) =
@@ -12,10 +10,10 @@ type BuildTool(?env) =
     static let shouldClean = Parameter.Create false
 
     static let getDefaultEnv () =
-        let logConfig = LogConfig().Info().ToConsole()
-        Parameters.Default
+        let logConfig = Logs.Default.Info().ToConsole()
+        Parameters.Default()
         |> Cache.Init
-        |> LogConfig.Current.Custom logConfig
+        |> Logs.Config.Custom logConfig
 
     let env =
         match env with
@@ -34,11 +32,10 @@ type BuildTool(?env) =
     member bt.Configure f : BuildTool = f bt
 
     interface IParametric with
-        member t.Find p = p.Find env
         member t.Parameters = env
 
     interface IParametric<BuildTool> with
-        member t.Custom p v = BuildTool(p.Custom v env)
+        member t.WithParameters ps = BuildTool(ps)
 
     member bt.WithCommandLineArgs(?args: seq<string>) =
         let args =

@@ -20,10 +20,8 @@ open System.IO
 open System.Reflection
 open System.Runtime.Versioning
 open System.Security
-
-#if INTERACTIVE
 open IntelliFactory.Build
-#endif
+open IntelliFactory.Core
 
 type ResolvedReference =
     | ResolvedRef of string

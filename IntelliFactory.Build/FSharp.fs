@@ -14,10 +14,6 @@
 
 namespace IntelliFactory.Build
 
-#if INTERACTIVE
-open IntelliFactory.Build
-#endif
-
 open System
 open System.Diagnostics
 open System.IO
@@ -25,8 +21,8 @@ open System.Reflection
 open System.Security
 open System.Xml
 open System.Xml.Linq
-module XG = IntelliFactory.Build.XmlGenerator
-module FS = IntelliFactory.Build.FileSystem
+open IntelliFactory.Build
+open IntelliFactory.Core
 
 type FSharpKind =
     | FSharpConsoleExecutable
@@ -113,21 +109,20 @@ type FSharpProjectWriter(x: IParametric) =
         match path with
         | None -> ()
         | Some path ->
-            let e n = XG.Element.Create(n, FSharpConstants.MSBuild)
+            let xg = XmlGenerator.Create FSharpConstants.MSBuild
             let xml =
-                e "Project" - [
-                    e "ItemGroup" - [
+                xg?Project - [
+                    xg?ItemGroup -< [
                         for r in refs.Paths do
                             let n = AssemblyName.GetAssemblyName(r)
-                            yield e "Reference" + ["Include", string n.Name] - [
-                                e "HintPath" -- Path.GetFullPath(Path.Combine(rootDir, r))
-                                e "Private" -- "False"
+                            yield xg?Reference + ["Include", string n.Name] - [
+                                xg?HintPath -- Path.GetFullPath(Path.Combine(rootDir, r))
+                                xg?Private -- "False"
                             ]
                     ]
                 ]
-                |> XG.Write
             log.Verbose("Generating {0}", path)
-            FS.TextContent(xml).WriteFile(path)
+            xml.WriteFile path
 
     member pw.Clean() =
         match path with
@@ -270,7 +265,7 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
                 task.Arguments
                 |> Seq.append [task.ToolPath]
                 |> String.concat Environment.NewLine
-            FS.TextContent(t).WriteFile(argsPath)
+            Content.Text(t).WriteFile(argsPath)
         if requiresBuild rr then
             task.Build()
         else
@@ -320,11 +315,10 @@ type FSharpProject(env: Parameters) =
             }
 
     interface IParametric with
-        member fp.Find p = p.Find env
         member fp.Parameters = env
 
     interface IParametric<FSharpProject> with
-        member fp.Custom p v = FSharpProject(p.Custom v env)
+        member fp.WithParameters env = FSharpProject(env)
 
     interface IProject with
         member p.Build rr = b.Value.Build rr

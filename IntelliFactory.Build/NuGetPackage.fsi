@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open IntelliFactory.Core
 
 /// Configuration for building a NuGet package.
 type NuGetPackageConfig =

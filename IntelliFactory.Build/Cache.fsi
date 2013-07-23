@@ -1,5 +1,7 @@
 ﻿namespace IntelliFactory.Build
 
+open IntelliFactory.Core
+
 [<Sealed>]
 type internal CacheKey =
     new : unit -> CacheKey

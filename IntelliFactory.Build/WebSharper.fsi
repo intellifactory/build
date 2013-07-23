@@ -1,5 +1,7 @@
 ﻿namespace IntelliFactory.Build
 
+open IntelliFactory.Core
+
 module WebSharperConfig =
 
     /// Path to the directory containing WebSharper tools.

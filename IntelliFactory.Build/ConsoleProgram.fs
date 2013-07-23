@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open IntelliFactory.Core
 
 /// Implements command-line `IB.exe` logic.
 [<Sealed>]
@@ -9,8 +10,8 @@ type ConsoleProgram() =
 
     let log =
         let env =
-            Parameters.Default
-            |> LogConfig.Current.Custom (LogConfig().Info().ToConsole())
+            Parameters.Default()
+            |> Logs.Config.Custom (Logs.Default.Info().ToConsole())
         Log.Create("IB", env)
 
     let writeUsage () =

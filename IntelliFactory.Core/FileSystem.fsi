@@ -13,7 +13,7 @@
 // permissions and limitations under the License.
 
 /// Provides utilities for accessing the file system and representing files.
-module IntelliFactory.Build.FileSystem
+module IntelliFactory.Core.FileSystem
 
 open System.IO
 open System.Text
@@ -38,7 +38,7 @@ type Binary =
     /// Writes to a given stream.
     member Write : Stream -> unit
 
-    /// Writes to a given file
+    /// Writes to a given file.
     member WriteFile : fullPath: string -> unit
 
     /// Constructs content from a byte array.
@@ -62,15 +62,14 @@ type Content =
     /// Writes to a given file.
     member WriteFile : fullPath: string -> unit
 
+    /// Constructs a binary content.
+    static member Binary : Binary -> Content
+
     /// Reads a binary file.
     static member ReadBinaryFile : fullPath: string -> Content
 
     /// Reads a text file.
     static member ReadTextFile : fullPath: string -> Content
 
-/// Alternative to `File.Exists` that fails with an exception when
-/// partial trust prevents the actual test.
-val internal FileExists : path: string -> bool
-
-/// Same for directories.
-val internal DirExists : path: string -> bool
+    /// Constructs a text content.
+    static member Text : string -> Content

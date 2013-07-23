@@ -16,12 +16,6 @@
     <Exec Command="build.cmd --clean" WorkingDirectory=".." />
   </Target>
   <ItemGroup>
-    <Compile Include="FileSystem.fsi" />
-    <Compile Include="FileSystem.fs" />
-    <Compile Include="NuGetUtils.fsi" />
-    <Compile Include="NuGetUtils.fs" />
-    <Compile Include="XmlGenerator.fsi" />
-    <Compile Include="XmlGenerator.fs" />
     <Compile Include="VsixPackages.fs" />
     <Compile Include="VsTemplates.fsi" />
     <Compile Include="VsTemplates.fs" />
@@ -29,14 +23,8 @@
     <Compile Include="VsixExtensions.fs" />
     <Compile Include="Mercurial.fsi" />
     <Compile Include="Mercurial.fs" />
-    <Compile Include="CommonBuildSetup.fsi" />
-    <Compile Include="CommonBuildSetup.fs" />
-    <Compile Include="Parameters.fsi" />
-    <Compile Include="Parameters.fs" />
     <Compile Include="Cache.fsi" />
     <Compile Include="Cache.fs" />
-    <Compile Include="Logging.fsi" />
-    <Compile Include="Logging.fs" />
     <Compile Include="Frameworks.fsi" />
     <Compile Include="Frameworks.fs" />
     <Compile Include="Utilities.fs" />
@@ -59,7 +47,6 @@
     <Compile Include="Solutions.fs" />
     <Compile Include="FSharp.fsi" />
     <Compile Include="FSharp.fs" />
-    <Compile Include="AssemblyResolver.fs" />
     <Compile Include="WebSharper.fsi" />
     <Compile Include="WebSharper.fs" />
     <Compile Include="NuGetPackage.fsi" />

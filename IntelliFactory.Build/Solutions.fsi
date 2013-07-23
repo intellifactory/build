@@ -1,5 +1,7 @@
 ﻿namespace IntelliFactory.Build
 
+open IntelliFactory.Core
+
 [<Sealed>]
 type Solution =
     member Build : unit -> unit

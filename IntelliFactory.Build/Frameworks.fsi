@@ -17,6 +17,7 @@ namespace IntelliFactory.Build
 open System
 open System.Runtime
 open System.Runtime.Versioning
+open IntelliFactory.Core
 
 /// Represents the target framework (with version and profile).
 [<Sealed>]

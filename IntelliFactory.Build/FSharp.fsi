@@ -14,6 +14,8 @@
 
 namespace IntelliFactory.Build
 
+open IntelliFactory.Core
+
 type internal FSharpKind =
     | FSharpConsoleExecutable
     | FSharpLibrary

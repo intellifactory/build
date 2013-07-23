@@ -17,6 +17,7 @@ namespace IntelliFactory.Build
 open System
 open System.Collections
 open System.Collections.Generic
+open IntelliFactory.Core
 
 /// Represents an abstract assembly reference.
 [<Sealed>]

@@ -8,13 +8,14 @@ open System.IO
 open NuGet
 
 // NOTE: the #load directives are only necessary here because
-// IntelliFactory.Build is bootstrapping (building itself).
+// the project is bootstrapping (building itself).
 
-#load "IntelliFactory.Build/FileSystem.fs"
-#load "IntelliFactory.Build/XmlGenerator.fs"
-#load "IntelliFactory.Build/Parameters.fs"
+#load "IntelliFactory.Core/Parametrization.fs"
+#load "IntelliFactory.Core/Logs.fs"
+#load "IntelliFactory.Core/FileSystem.fs"
+#load "IntelliFactory.Core/XmlTools.fs"
+#load "IntelliFactory.Core/AssemblyResolution.fs"
 #load "IntelliFactory.Build/Cache.fs"
-#load "IntelliFactory.Build/Logging.fs"
 #load "IntelliFactory.Build/Frameworks.fs"
 #load "IntelliFactory.Build/Utilities.fs"
 #load "IntelliFactory.Build/Interfaces.fs"
@@ -27,23 +28,35 @@ open NuGet
 #load "IntelliFactory.Build/References.fs"
 #load "IntelliFactory.Build/Solutions.fs"
 #load "IntelliFactory.Build/FSharp.fs"
-#load "IntelliFactory.Build/AssemblyResolver.fs"
 #load "IntelliFactory.Build/WebSharper.fs"
 #load "IntelliFactory.Build/NuGetPackage.fs"
 #load "IntelliFactory.Build/BuildTool.fs"
 
 open IntelliFactory.Build
+open IntelliFactory.Core
 
-let bt =
-    BuildTool()
-        .PackageId("IntelliFactory.Build", "0.2")
-        .Configure(fun bt ->
-            bt.WithFramework(bt.Framework.Net40)
-            |> LogConfig.Current.Custom (LogConfig().Verbose().ToConsole()))
-        .WithCommandLineArgs()
+let common =
+    BuildTool().WithCommandLineArgs()
+    |> Logs.Config.Custom (Logs.Default.Verbose().ToConsole())
+
+let core =
+    common.PackageId("IntelliFactory.Core", "0.1")
+
+let build =
+    common.PackageId("IntelliFactory.Build", "0.2")
+
+let coreLib =
+    core.FSharp.Library("IntelliFactory.Core")
+        .SourcesFromProject()
+        .References(fun rt ->
+            [
+                rt.Assembly("System.Xml")
+                rt.Assembly("System.Xml.Linq")
+            ])
 
 let buildLib =
-    bt.FSharp.Library("IntelliFactory.Build")
+    build.FSharp.Library("IntelliFactory.Build")
+        .SourcesFromProject()
         .References(fun rt ->
             [
                 rt.Assembly("Microsoft.Build")
@@ -54,31 +67,38 @@ let buildLib =
                 rt.Assembly("System.Xml")
                 rt.Assembly("System.Xml.Linq")
                 rt.NuGet("NuGet.Core").Version("2.6.0").Reference()
-                rt.NuGet("DotNetZip").Version("1.9.1.8").Reference()
+                rt.Project(coreLib)
+                // rt.NuGet("DotNetZip").Version("1.9.1.8").Reference()
             ])
-        .SourcesFromProject()
         .Embed(["../tools/NuGet/NuGet.exe"])
 
 let buildTool =
-    bt.FSharp.ConsoleExecutable("IB")
+    build.FSharp.ConsoleExecutable("IB").SourcesFromProject()
         .References(fun rt ->
             [
+                rt.Project(coreLib)
                 rt.Project(buildLib)
             ])
-        .SourcesFromProject()
 
-bt.Solution [
+common.Solution [
 
+    coreLib
     buildLib
     buildTool
 
-    bt.NuGet.CreatePackage()
+    core.NuGet.CreatePackage()
+        .Description("Provides utilities missing from F# standard library")
+        .ProjectUrl("http://bitbucket.com/IntelliFactory/build")
+        .Apache20License()
+        .Add(coreLib)
+
+    build.NuGet.CreatePackage()
         .Description("Provides utilities for build automation, \
             in particular building WebSharper and F# projects, \
             without the need for MSBuild.")
-        .ProjectUrl("http://bitbucket.com/IntelliFactory/build/")
+        .ProjectUrl("http://bitbucket.com/IntelliFactory/build")
         .Apache20License()
-        .Add<_>(buildLib)
+        .Add(buildLib)
 
 ]
-|> bt.Dispatch
+|> common.Dispatch

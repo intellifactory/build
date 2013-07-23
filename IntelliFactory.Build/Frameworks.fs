@@ -14,9 +14,8 @@
 
 namespace IntelliFactory.Build
 
-#if INTERACTIVE
+open IntelliFactory.Core
 open IntelliFactory.Build
-#endif
 
 open System
 open System.Runtime

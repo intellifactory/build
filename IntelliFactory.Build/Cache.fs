@@ -2,10 +2,7 @@
 
 open System
 open System.Collections.Generic
-
-#if INTERACTIVE
-open IntelliFactory.Build
-#endif
+open IntelliFactory.Core
 
 [<Sealed>]
 type CacheKey() =

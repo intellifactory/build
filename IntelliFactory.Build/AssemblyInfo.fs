@@ -5,12 +5,8 @@ open System.IO
 open System.Reflection
 open System.Runtime.InteropServices
 open System.Runtime.Versioning
-
-#if INTERACTIVE
 open IntelliFactory.Build
-#endif
-
-module FS = IntelliFactory.Build.FileSystem
+open IntelliFactory.Core
 
 type AssemblyInfoSyntax =
     | CSharpSyntax
@@ -182,6 +178,6 @@ type AssemblyInfoGenerator(env) =
     let fwt = Frameworks.Current.Find env
 
     member g.Generate(s, d, outFile: string) =
-        FS.TextContent(gen fwt s d).WriteFile(outFile)
+        Content.Text(gen fwt s d).WriteFile(outFile)
 
     static member Current = current

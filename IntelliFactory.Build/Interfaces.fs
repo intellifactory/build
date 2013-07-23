@@ -2,10 +2,8 @@
 
 open System
 open System.IO
-
-#if INTERACTIVE
+open IntelliFactory.Core
 open IntelliFactory.Build
-#endif
 
 /// Represents a file that is to become a part of a `NuGet` archive.
 type INuGetFile =

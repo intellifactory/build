@@ -4,10 +4,8 @@ open System
 open System.IO
 open System.Security
 open NuGet
-
-#if INTERACTIVE
 open IntelliFactory.Build
-#endif
+open IntelliFactory.Core
 
 [<Sealed>]
 type PackageId () =

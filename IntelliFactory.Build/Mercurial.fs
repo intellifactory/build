@@ -29,7 +29,7 @@ let ( +/ ) a b = Path.Combine (a, b)
 let InferTag (folder: string) : option<string> =
     let tagsFile = folder +/ ".hg" +/ "cache" +/ "tags"
     let tagMap =
-        if FileSystem.FileExists tagsFile then
+        if File.Exists tagsFile then
             File.ReadAllLines tagsFile
             |> Seq.choose (fun line ->
                 let parts = line.Trim().Split(' ')
@@ -40,7 +40,7 @@ let InferTag (folder: string) : option<string> =
         else
             dict []
     let dirStateFile = folder +/ ".hg" +/ "dirstate"
-    if FileSystem.FileExists dirStateFile then
+    if File.Exists dirStateFile then
         let hash = ParseHash (File.ReadAllBytes dirStateFile)
         match tagMap.TryGetValue(hash) with
         | true, tag -> Some tag

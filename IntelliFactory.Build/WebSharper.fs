@@ -2,10 +2,8 @@
 
 open System
 open System.IO
-
-#if INTERACTIVE
 open IntelliFactory.Build
-#endif
+open IntelliFactory.Core
 
 type WebSharperKind =
     | WebSharperExtension
@@ -192,7 +190,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             let aR =
                 AssemblyResolver.Fallback(AssemblyResolver.SearchDomain(),
                     AssemblyResolver.SearchPaths searchDirs)
-            aR.With() <| fun () ->
+            aR.Wrap <| fun () ->
                 util.Execute(outputPath1,
                     [
                         yield outputPath1
@@ -257,11 +255,10 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         member p.References = project.References
 
     interface IParametric with
-        member x.Find p = p.Find fs
         member x.Parameters = Parameters.Get fs
 
     interface IParametric<WebSharperProject> with
-        member x.Custom p v = WebSharperProject(cfg, p.Custom v fs)
+        member x.WithParameters env = WebSharperProject(cfg, Parameters.Set env fs)
 
 [<Sealed>]
 type WebSharperHostWebsite(env: IParametric) =
@@ -305,11 +302,10 @@ type WebSharperHostWebsite(env: IParametric) =
         member h.References = refs
 
     interface IParametric with
-        member hw.Find p = p.Find env
         member hw.Parameters = env.Parameters
 
     interface IParametric<WebSharperHostWebsite> with
-        member hw.Custom p v = WebSharperHostWebsite(p.Custom v env.Parameters)
+        member hw.WithParameters env = WebSharperHostWebsite(env)
 
 [<Sealed>]
 type WebSharperProjects(env) =

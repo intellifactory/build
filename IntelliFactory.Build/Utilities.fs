@@ -15,12 +15,14 @@
 [<AutoOpen>]
 module internal IntelliFactory.Build.Utilities
 
-#if INTERACTIVE
-open IntelliFactory.Build
-#endif
-
 open System
 open System.IO
+open IntelliFactory.Core
+open IntelliFactory.Build
+
+type Log = Logs.Log
+type Binary = FileSystem.Binary
+type Content = FileSystem.Content
 
 let OrElse a b =
     match a with

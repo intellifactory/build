@@ -1,6 +1,7 @@
 ﻿namespace IntelliFactory.Build
 
 open System
+open IntelliFactory.Core
 
 /// Package identifier parameters.
 [<Sealed>]
