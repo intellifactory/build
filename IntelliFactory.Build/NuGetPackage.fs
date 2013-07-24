@@ -196,18 +196,24 @@ type NuGetSpecProject(env: IParametric, file: string) =
 
     let sourceBytes = lazy File.ReadAllBytes fullPath
 
+    let getVN () =
+        let vn = PackageVersion.Current.Find env
+        let fvn = PackageVersion.Full.Find env
+        SafeNuGetSemanticVersion(fvn, ?suffix = vn.Suffix)
+
     let getPB () =
         use input = new MemoryStream(sourceBytes.Value, false)
         SafeNuGetPackageBuilder(input, root)
 
     let getNupkgPath () =
         let builder = getPB ()
-        Path.Combine(out, String.Format("{0}.{1}.nupkg", builder.Id, builder.Version))
+        Path.Combine(out, String.Format("{0}.{1}.nupkg", builder.Id, getVN ()))
 
     interface IProject with
 
         member p.Build() =
             let builder = getPB ()
+            builder.Version <- getVN ()
             let nupkg = getNupkgPath ()
             log.Info("Writing {0}", nupkg)
             let outBytes =

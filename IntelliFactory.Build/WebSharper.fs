@@ -34,35 +34,8 @@ module WebSharperConfig =
 module WebSharperReferences =
 
     let Compute env =
-        let rt = References.Current.Find env
         let rb = ReferenceBuilder.Current.Find env
         let ws = rb.NuGet("WebSharper")
-//        let rs =
-//            [
-//                
-//                "IntelliFactory.Formlet"
-//                "IntelliFactory.Html"
-//                "IntelliFactory.JavaScript"
-//                "IntelliFactory.Reactive"
-//                "IntelliFactory.WebSharper"
-//                "IntelliFactory.WebSharper.Collections"
-//                "IntelliFactory.WebSharper.Control"
-//                "IntelliFactory.WebSharper.Core"
-//                "IntelliFactory.WebSharper.Dom"
-//                "IntelliFactory.WebSharper.Ecma"
-//                "IntelliFactory.WebSharper.Formlet"
-//                "IntelliFactory.WebSharper.Html"
-//                "IntelliFactory.WebSharper.Html5"
-//                "IntelliFactory.WebSharper.InterfaceGenerator"
-//                "IntelliFactory.WebSharper.JQuery"
-//                "IntelliFactory.WebSharper.Sitelets"
-//                "IntelliFactory.WebSharper.Testing"
-//                "IntelliFactory.WebSharper.Web"
-//                "IntelliFactory.Xml"
-//            ]
-//        let makeRef (n: string) =
-//            let p = String.Format("/tools/net45/{0}.dll", n)
-//            ws.At([p]).Reference()
         Seq.singleton (ws.Reference())
 
 type WebSharperProjectConfig =

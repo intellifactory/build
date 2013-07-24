@@ -45,6 +45,10 @@ type MSBuildProject internal (env: IParametric, path: string, ?props: Map<string
         member p.Framework = fw
         member p.References = Seq.empty
 
+    /// Sets any property.
+    member p.Property(name, value) =
+        MSBuildProject(env, path, Map.add name value props)
+
     /// Sets the configuration property.
     member p.Configuration(cfg) =
-        MSBuildProject(env, path, Map.add "Configuration" cfg props)
+        p.Property("Configuration", cfg)

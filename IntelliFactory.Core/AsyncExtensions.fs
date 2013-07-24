@@ -17,6 +17,7 @@
 module IntelliFactory.Core.AsyncExtensions
 
 open System
+open System.Threading
 
 /// Extends `Async` type with extra methods.
 type Async with
@@ -49,17 +50,28 @@ type AsyncResult<'T> =
     | AsyncCompleted of 'T
     | AsyncFaulted of exn
 
+    /// Returns using the normal `Async` convention.
+    member r.Return() =
+        Async.FromContinuations(fun (completed, faulted, cancelled) ->
+            match r with
+            | AsyncCancelled e -> cancelled e
+            | AsyncCompleted x -> completed x
+            | AsyncFaulted e -> faulted e)
+
 /// Utilities involving explicit representation of `Async` workflow results.
 [<Sealed>]
 type AsyncResult =
 
     /// Capturs an explicit result of an `Async` workflow.
-    static member Capture (work: Async<'T>) : Async<AsyncResult<'T>> =
-        Async.FromContinuations(fun (ok, _, _) ->
-            let k1 x = ok (AsyncCompleted x)
-            let k2 x = ok (AsyncFaulted x)
-            let k3 x = ok (AsyncCancelled x)
-            Async.Spawn(fun () -> Async.StartWithContinuations(work, k1, k2, k3)))
+    static member Capture(work: Async<'T>, ?token: CancellationToken) : Async<AsyncResult<'T>> =
+        async.Bind(Async.CancellationToken, fun t ->
+            Async.FromContinuations(fun (ok, _, _) ->
+                let completed x = ok (AsyncCompleted x)
+                let faulted e = ok (AsyncFaulted e)
+                let cancelled e = ok (AsyncCancelled e)
+                Async.StartWithContinuations(work,
+                    completed, faulted, cancelled,
+                    cancellationToken = defaultArg token t)))
 
     /// Defines an `Async` workflow from a result continuation.
     static member DefineAsync (f: (AsyncResult<'T> -> unit) -> unit) : Async<'T> =
@@ -69,3 +81,16 @@ type AsyncResult =
                 | AsyncCompleted r -> k1 r
                 | AsyncFaulted r -> k2 r
             Async.Spawn(f, k))
+
+    /// Unwraps a wrapped result to normal `Async` convention.
+    static member Unwrap(work: Async<AsyncResult<'T>>, ?token: CancellationToken) : Async<'T> =
+        async.Bind(Async.CancellationToken, fun t ->
+            Async.FromContinuations(fun (completed, faulted, cancelled) ->
+                let completed x =
+                    match x with
+                    | AsyncCancelled e -> cancelled e
+                    | AsyncCompleted x -> completed x
+                    | AsyncFaulted e -> faulted e
+                Async.StartWithContinuations(work,
+                    completed, faulted, cancelled,
+                    cancellationToken = defaultArg token t)))
