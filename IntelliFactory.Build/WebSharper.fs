@@ -47,7 +47,7 @@ module WebSharperReferences =
             ]
         let makeRef (n: string) =
             let p = String.Format("/tools/net40/{0}.dll", n)
-            ws.At(p).Reference()
+            ws.At([p]).Reference()
         [
             for r in rs ->
                 makeRef r
@@ -233,7 +233,8 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         rm outputPath2
         rm outputPath
 
-    let build rr =
+    let build () =
+        let rr = References.Current.Find(fs).ResolveReferences fw project.References
         if requiresBuild rr then
             clean ()
             FSharpProjectWriter(fs).Write(rr)
@@ -244,13 +245,17 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             log.Info("Skipping {0}", project.Name)
 
     interface INuGetExportingProject with
-        member p.NuGetFiles = (fs :> INuGetExportingProject).NuGetFiles
+        member p.NuGetFiles =
+            (fs :> INuGetExportingProject).NuGetFiles
+
+    interface IReferenceProject with
+        member p.GeneratedAssemblyFiles =
+            (fs :> IReferenceProject).GeneratedAssemblyFiles
 
     interface IProject with
-        member p.Build(rr) = build rr
+        member p.Build() = build ()
         member p.Clean() = clean ()
         member p.Framework = project.Framework
-        member p.GeneratedAssemblyFiles = project.GeneratedAssemblyFiles
         member p.Name = project.Name
         member p.References = project.References
 
@@ -273,7 +278,8 @@ type WebSharperHostWebsite(env: IParametric) =
 
     interface IProject with
 
-        member h.Build(rr) =
+        member h.Build() =
+            let rr = References.Current.Find(env).ResolveReferences fw refs
             let refs = ResizeArray()
             for p in rr.Paths do
                 match Path.GetFileName(p) with
@@ -297,7 +303,6 @@ type WebSharperHostWebsite(env: IParametric) =
             Directory.Delete(binDir, true)
 
         member h.Framework = fw
-        member h.GeneratedAssemblyFiles = Seq.empty
         member h.Name = name
         member h.References = refs
 

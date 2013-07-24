@@ -75,6 +75,7 @@ type FSharpProject =
     interface INuGetExportingProject
     interface IParametric<FSharpProject>
     interface IProject
+    interface IReferenceProject
 
 [<AutoOpen>]
 module FSharpProjectExtensinos =

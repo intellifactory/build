@@ -71,8 +71,7 @@ type PackageVersionTool(env) =
 
     member t.PickFreshPackageVersion(pid, v) =
        (pid, string v)
-       |> cache.Lookup freshVersionKey (fun (pid, v) ->
-            let v = SV.Parse v
+       |> cache.Lookup freshVersionKey (fun () ->
             let all = getUsedVersions pid
             let r = pickVersion all v
             log.Info("{0} --> {1}", v, r)

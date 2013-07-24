@@ -60,7 +60,7 @@ type BuildTool(?env) =
         else
             sln.Build()
 
-    member bt.ResolveReferences fw refs = rr.Resolve fw refs
+    member bt.ResolveReferences fw refs = rr.ResolveReferences fw refs
     member bt.NuGet = ng
     member bt.Framework = fw
     member bt.FSharp = fsharp

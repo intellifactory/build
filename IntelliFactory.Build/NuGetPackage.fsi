@@ -11,7 +11,7 @@ type NuGetPackageConfig =
         Description : string
         Id : string
         LicenseUrl : option<string>
-        NuGetReferences : list<NuGetReference>
+        NuGetReferences : list<INuGetReference>
         OutputPath : string
         ProjectUrl : option<string>
         RequiresLicenseAcceptance : bool
@@ -27,6 +27,9 @@ type NuGetPackageConfig =
 [<Sealed>]
 type NuGetPackageBuilder =
     interface IProject
+
+    /// Adds another package as a dependency.
+    member AddPackage : NuGetPackageBuilder -> NuGetPackageBuilder
 
     /// Adds NuGet references for a given project as package references.
     member AddProject : IProject -> NuGetPackageBuilder

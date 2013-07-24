@@ -23,13 +23,13 @@ type Cache() =
     let dict = Dictionary<obj,obj>(HashIdentity.Structural)
     static let current = Parameter.Create(Cache())
 
-    member c.Lookup<'T1,'T2 when 'T1 : equality> (key: CacheKey) (f: 'T1 -> 'T2) (input: 'T1) : 'T2 =
+    member c.Lookup<'T1,'T2 when 'T1 : equality> (key: CacheKey) (f: unit -> 'T2) (input: 'T1) : 'T2 =
         lock root <| fun () ->
             let k = { CacheKey = key; Input = input }
             match dict.TryGetValue(k) with
             | true, (:? 'T2 as res) -> res
             | _ ->
-                let res = f input
+                let res = f ()
                 dict.Add(k, res)
                 res
 

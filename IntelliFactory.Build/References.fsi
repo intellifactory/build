@@ -19,10 +19,6 @@ open System.Collections
 open System.Collections.Generic
 open IntelliFactory.Core
 
-/// Represents an abstract assembly reference.
-[<Sealed>]
-type Reference
-
 /// Represents a resolved reference to an assembly.
 [<Sealed>]
 type ResolvedReference =
@@ -41,17 +37,13 @@ type ResolvedReferences =
     member References : seq<ResolvedReference>
     static member Empty : ResolvedReferences
 
-type IProject =
-    abstract Build : ResolvedReferences -> unit
-    abstract Clean : unit -> unit
-    abstract Framework : Framework
-    abstract GeneratedAssemblyFiles : seq<string>
-    abstract Name : string
-    abstract References : seq<Reference>
-
 [<Sealed>]
 type NuGetReference =
-    member At : path: string -> NuGetReference
+    interface IComparable
+    interface INuGetReference
+
+    static member internal Wrap : INuGetReference -> NuGetReference
+    member At : paths: seq<string> -> NuGetReference
     member Latest : unit -> NuGetReference
     member Reference : unit -> Reference
     member internal Version : unit -> option<string>
@@ -68,7 +60,7 @@ type ReferenceBuilder =
     member Assembly : string -> Reference
     member File : string -> Reference
     member NuGet : string -> NuGetReference
-    member Project : IProject -> Reference
+    member Project : IReferenceProject -> Reference
     static member internal Current : Parameter<ReferenceBuilder>
 
 [<Sealed>]
@@ -78,7 +70,8 @@ type References =
     /// as `WebSharper.exe`.
     member FindTool : ResolvedReferences -> Framework -> fileName: string -> option<string>
 
-    member GetNuGetReference : Reference -> option<NuGetReference>
-    member Resolve : Framework -> seq<Reference> -> ResolvedReferences
-    member ResolveProjectReferences : seq<Reference> -> ResolvedReferences -> ResolvedReferences
+    member GetNuGetReference : Reference -> option<INuGetReference>
+    member ResolveReferences : Framework -> seq<Reference> -> ResolvedReferences
+
     static member internal Current : Parameter<References>
+

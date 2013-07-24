@@ -12,21 +12,21 @@ type Solution =
     }
 
     member s.Build() =
-        let fwt = Frameworks.Current.Find s.env
-        let rt = References.Current.Find s.env
-        let refs =
-            fwt.Cache(fun fw ->
-                s.projects
-                |> List.filter (fun p -> p.Framework = fw)
-                |> Seq.collect (fun p -> p.References)
-                |> rt.Resolve fw)
-        let log = Log.Create<Solution> s.env
+//        let fwt = Frameworks.Current.Find s.env
+//        let rt = References.Current.Find s.env
+//        let refs =
+//            fwt.Cache(fun fw ->
+//                s.projects
+//                |> List.filter (fun p -> p.Framework = fw)
+//                |> Seq.collect (fun p -> p.References)
+//                |> rt.Resolve fw)
+//        let log = Log.Create<Solution> s.env
         for p in s.projects do
-            let rs =
-                refs p.Framework
-                |> rt.ResolveProjectReferences p.References
-            log.Info("Building {0} for {1}", p.Name, p.Framework.Name)
-            p.Build(rs)
+//            let rs =
+//                refs p.Framework
+//                |> rt.ResolveProjectReferences p.References
+//            log.Info("Building {0} for {1}", p.Name, p.Framework.Name)
+            p.Build()
 
     member s.Clean() =
         for p in s.projects do

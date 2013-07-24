@@ -5,9 +5,9 @@
     <Name>IntelliFactory.Build</Name>
     <OutputPath>bin</OutputPath>
     <PrivateRefs>False</PrivateRefs>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
-  <Import Project="../build/net40/$(Name).proj" />
+  <Import Project="../build/net45/$(Name).proj" />
   <Import Project="$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0/Microsoft.FSharp.targets" />
   <Target Name="Build">
     <Exec Command="build.cmd" WorkingDirectory=".." />
@@ -35,8 +35,8 @@
     <Compile Include="SafeNuGet.fs" />
     <Compile Include="BuildConfig.fsi" />
     <Compile Include="BuildConfig.fs" />
-    <Compile Include="NuGetConfig.fsi" />
-    <Compile Include="NuGetConfig.fs" />
+    <Compile Include="NuGet.fsi" />
+    <Compile Include="NuGet.fs" />
     <Compile Include="Package.fsi" />
     <Compile Include="Package.fs" />
     <Compile Include="AssemblyInfo.fsi" />

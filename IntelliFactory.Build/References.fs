@@ -49,11 +49,26 @@ type PackageReference =
 type NuGetReference =
     {
         package : PackageReference
-        path : option<string>
+        path : option<list<string>>
     }
 
-    member r.At path =
-        { r with path = Some path }
+    static member Wrap(ng: INuGetReference) =
+        {
+            package =
+                {
+                    id = ng.PackageId
+                    version = ng.PackageVersion
+                }
+            path = Option.map Seq.toList ng.Paths
+        }
+
+    interface INuGetReference with
+        member r.PackageId = r.package.id
+        member r.PackageVersion = r.package.version
+        member r.Paths = Option.map Seq.ofList r.path
+
+    member r.At (path: seq<string>) =
+        { r with path = Some (Seq.toList path) }
 
     member r.Latest() =
         { r with package = { r.package with version = None } }
@@ -70,21 +85,7 @@ type NuGetReference =
     member r.Id =
         r.package.id
 
-and Reference =
-    | FileRef of string
-    | NuGetRef of NuGetReference
-    | ProjectRef of IProject
-    | SystemRef of string
-
-and IProject =
-    abstract Build : ResolvedReferences -> unit
-    abstract Clean : unit -> unit
-    abstract Framework : Framework
-    abstract GeneratedAssemblyFiles : seq<string>
-    abstract Name : string
-    abstract References : seq<Reference>
-
-and ResolvedReferences =
+type ResolvedReferences =
     {
         pack : PackageSet
         refs : seq<ResolvedReference>
@@ -177,9 +178,12 @@ module ReferenceConfig =
 [<Sealed>]
 type SystemResolver private (env) =
     static let current = Parameter.Define(fun env -> SystemResolver env)
+    static let ck = CacheKey()
+
     let fwt = Frameworks.Current.Find env
     let paths = ReferenceConfig.AssemblySearchPaths.Find env |> fwt.Cache
     let log = Log.Create<SystemResolver>(env)
+    let cache = Cache.Current.Find env
 
     let inDirByExt (ext: string) (ref: AssemblyName) (dir: string) =
         let p = Path.Combine(dir, ref.Name + ext)
@@ -196,8 +200,10 @@ type SystemResolver private (env) =
         | r -> r
 
     member this.Resolve fw (name: AssemblyName) =
-        Seq.tryPick (inDir name) (paths fw)
-        |> Option.map (fun p -> ResolvedFrameworkRef p)
+        (fw, string name)
+        |> cache.Lookup ck (fun () ->
+            Seq.tryPick (inDir name) (paths fw)
+            |> Option.map (fun p -> ResolvedFrameworkRef p))
 
     static member Current = current
 
@@ -227,11 +233,13 @@ type NuGetManager =
 [<Sealed>]
 type NuGetResolver private (env) =
     static let current = Parameter.Define(fun env -> NuGetResolver env)
+    static let ck = CacheKey()
     let log = Log.Create<NuGetResolver>(env)
     let pm = NuGetManager.Current env
     let fwt = Frameworks.Current.Find env
     let srt = SystemResolver.Current.Find env
     let repo = NuGetConfig.LocalRepositoryPath.Find env
+    let cache = Cache.Current.Find env
 
     let findPath pkg (p: string) =
         let p = p.TrimStart [| '\\'; '/' |]
@@ -336,10 +344,10 @@ type NuGetResolver private (env) =
         Seq.iter visit ps
         packages
 
-    let installPkgSet rs =
+    let installPkgSet (rs: seq<INuGetReference>) =
 
-        let getSpec ref =
-            ref.package
+        let getSpec (ref: INuGetReference) =
+            { id = ref.PackageId; version = ref.PackageVersion }
 
         let findLocalPackageExact pid ver =
             pm.LocalRepository.FindExact(pid, ver)
@@ -380,15 +388,18 @@ type NuGetResolver private (env) =
             ensureInstalledSpec (getSpec r))
         |> Reify
 
-    let applyRule fw (set: PackageSet) r =
-        match set.TryGetValue(r.package.id) with
+    let applyRule fw (set: PackageSet) (r: INuGetReference) =
+        match set.TryGetValue(r.PackageId) with
         | true, pkg ->
-            match r.path with
+            match r.Paths with
             | None -> resolveAutoRefs fw pkg
-            | Some path ->
-                findPath pkg path
-                |> Option.toList
-                |> Seq.ofList
+            | Some paths ->
+                seq {
+                    for p in paths do
+                        yield!
+                            findPath pkg p
+                            |> Option.toList
+                }
         | _ -> Seq.empty
 
     let locateTool (fw: Framework) package (name: string) =
@@ -405,26 +416,28 @@ type NuGetResolver private (env) =
         | None -> None
         | Some hit -> findPath package hit.Path
 
-    member this.Resolve fw rs =
-        let set =
-            installPkgSet rs
-            |> completePkgSet fw
-        let isImplicitAuto (pkg: SafeNuGetPackage) =
-            rs
-            |> Seq.forall (fun r -> r.Id <> pkg.Id)
-        let refs =
-            seq {
-                for r in rs do
-                    yield! applyRule fw set r
-                for KeyValue (_, pkg) in set do
-                    if isImplicitAuto pkg then
-                        yield! resolveAutoRefs fw pkg
-            }
-            |> buildAssemblySet
-        {
-            pack = set
-            refs = refs
-        }
+    member this.Resolve fw (rs: seq<INuGetReference>) =
+        (fw, Set.ofSeq (Seq.map NuGetReference.Wrap rs))
+        |> cache.Lookup ck (fun () ->
+            let set =
+                installPkgSet rs
+                |> completePkgSet fw
+            let isImplicitAuto (pkg: SafeNuGetPackage) =
+                rs
+                |> Seq.forall (fun r -> r.PackageId <> pkg.Id)
+            let refs =
+                seq {
+                    for r in rs do
+                        yield! applyRule fw set r
+                    for KeyValue (_, pkg) in set do
+                        if isImplicitAuto pkg then
+                            yield! resolveAutoRefs fw pkg
+                }
+                |> buildAssemblySet
+            {
+                pack = set
+                refs = refs
+            })
 
     member this.FindTool r fw name =
         r.pack.Values
@@ -507,5 +520,8 @@ type References private (env: Parameters) =
         |> buildAssemblySet
         |> rr.WithReferences
 
-    static member Current = current
+    member rs.ResolveReferences(fw: Framework)(refs: seq<Reference>) =
+        rs.Resolve fw refs
+        |> rs.ResolveProjectReferences refs
 
+    static member Current = current

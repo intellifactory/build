@@ -13,6 +13,7 @@ type WebSharperProject =
     interface IParametric
     interface IParametric<WebSharperProject>
     interface IProject
+    interface IReferenceProject
 
 [<Sealed>]
 type WebSharperHostWebsite =

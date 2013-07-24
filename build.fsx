@@ -22,7 +22,7 @@ open NuGet
 #load "IntelliFactory.Build/Company.fs"
 #load "IntelliFactory.Build/SafeNuGet.fs"
 #load "IntelliFactory.Build/BuildConfig.fs"
-#load "IntelliFactory.Build/NuGetConfig.fs"
+#load "IntelliFactory.Build/NuGet.fs"
 #load "IntelliFactory.Build/Package.fs"
 #load "IntelliFactory.Build/AssemblyInfo.fs"
 #load "IntelliFactory.Build/References.fs"
@@ -68,7 +68,6 @@ let buildLib =
                 rt.Assembly("System.Xml.Linq")
                 rt.NuGet("NuGet.Core").Version("2.6.0").Reference()
                 rt.Project(coreLib)
-                // rt.NuGet("DotNetZip").Version("1.9.1.8").Reference()
             ])
         .Embed(["../tools/NuGet/NuGet.exe"])
 
@@ -78,20 +77,17 @@ let buildTool =
             [
                 rt.Project(coreLib)
                 rt.Project(buildLib)
+                rt.NuGet("NuGet.Core").Version("2.6.0").Reference()
             ])
 
-common.Solution [
-
-    coreLib
-    buildLib
-    buildTool
-
+let corePkg =
     core.NuGet.CreatePackage()
         .Description("Provides utilities missing from F# standard library")
         .ProjectUrl("http://bitbucket.com/IntelliFactory/build")
         .Apache20License()
         .Add(coreLib)
 
+let buildPkg =
     build.NuGet.CreatePackage()
         .Description("Provides utilities for build automation, \
             in particular building WebSharper and F# projects, \
@@ -99,6 +95,14 @@ common.Solution [
         .ProjectUrl("http://bitbucket.com/IntelliFactory/build")
         .Apache20License()
         .Add(buildLib)
+        .Add(buildTool)
+        .AddPackage(corePkg)
 
+common.Solution [
+    coreLib
+    buildLib
+    buildTool
+    corePkg
+    buildPkg
 ]
 |> common.Dispatch

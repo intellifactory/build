@@ -218,6 +218,7 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
     let ainfoPath = Path.Combine(outDir, name + ".annotations.fs")
     let fw = BuildConfig.CurrentFramework.Find env
     let refs = FSharpConfig.References.Find env
+    let resolved = lazy References.Current.Find(env).ResolveReferences fw refs
     let aid =
         let d = AssemblyInfoData.Current.Find env
         let t =
@@ -251,7 +252,8 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
         |> Seq.exists (IsFile >> not)
         || lastWrite outputFiles < lastWrite (inputFiles rr |> Seq.filter IsFile)
 
-    member p.Build(rr: ResolvedReferences) =
+    member p.Build() =
+        let rr = resolved.Value
         aig.Generate(AssemblyInfoSyntax.FSharp, aid, ainfoPath)
         pW.Write rr
         let sources = Path.GetFullPath ainfoPath :: Seq.toList sources
@@ -294,6 +296,7 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
 
     member p.Name = name
     member p.References = refs
+    member p.Resolved = resolved.Value
 
 [<Sealed>]
 type FSharpProject(env: Parameters) =
@@ -303,16 +306,30 @@ type FSharpProject(env: Parameters) =
     let b = lazy FSharpProjectBuilder(env, log)
     let pP = lazy FSharpProjectParser(env)
     let fw = BuildConfig.CurrentFramework.Find env
+    let kind = FSharpConfig.Kind.Find env
+    let mutable resolvedRefs = ResolvedReferences.Empty
+    let outPath = FSharpConfig.OutputPath.Find env
 
     let appendParameters (par: Parameter<_>) xs ps =
         par.Custom (Reify (Seq.append (par.Find env) xs)) ps
 
     interface INuGetExportingProject with
         member p.NuGetFiles =
-            seq {
-                for file in b.Value.LibraryFiles do
-                    yield NuGetFile.LibraryFile(fw, file)
-            }
+            match kind with
+            | FSharpLibrary ->
+                seq {
+                    for file in b.Value.LibraryFiles do
+                        yield NuGetFile.LibraryFile(fw, file)
+                }
+            | FSharpConsoleExecutable | FSharpWindowsExecutable ->
+                let toolFile p =
+                    NuGetFile.Local(p, String.Format("/tools/{0}/{1}", fw.Name, Path.GetFileName p))
+                seq {
+                    yield toolFile outPath
+                    for f in b.Value.Resolved.References do
+                        if not f.IsFrameworkReference then
+                            yield toolFile f.Path
+                }
 
     interface IParametric with
         member fp.Parameters = env
@@ -321,12 +338,14 @@ type FSharpProject(env: Parameters) =
         member fp.WithParameters env = FSharpProject(env)
 
     interface IProject with
-        member p.Build rr = b.Value.Build rr
+        member p.Build() = b.Value.Build()
         member p.Clean() = b.Value.Clean()
         member p.Framework = b.Value.Framework
-        member p.GeneratedAssemblyFiles = b.Value.GeneratedAssemblyFiles
         member p.Name = b.Value.Name
         member p.References = b.Value.References
+
+    interface IReferenceProject with
+        member p.GeneratedAssemblyFiles = b.Value.GeneratedAssemblyFiles
 
 [<AutoOpen>]
 module FSharpProjectExtensinos =

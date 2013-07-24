@@ -11,7 +11,7 @@ type NuGetPackageConfig =
         Description : string
         Id : string
         LicenseUrl : option<string>
-        NuGetReferences : list<NuGetReference>
+        NuGetReferences : list<INuGetReference>
         OutputPath : string
         ProjectUrl : option<string>
         RequiresLicenseAcceptance : bool
@@ -51,21 +51,26 @@ type NuGetPackageBuilder(settings, env) =
     let fwt = Frameworks.Current.Find env
     let rs = References.Current.Find env
     let cfg = settings.PackageConfig
+    let rB = ReferenceBuilder.Current.Find env
     let upd cfg = NuGetPackageBuilder({ settings with PackageConfig = cfg }, env )
+
+    member p.AddNuGetRefs(ngr: seq<INuGetReference>) =
+        let ng =
+            ngr
+            |> Seq.append cfg.NuGetReferences
+            |> Seq.distinct
+            |> Seq.toList
+        let settings = { settings with PackageConfig = { settings.PackageConfig with NuGetReferences = ng } }
+        NuGetPackageBuilder(settings, env)
 
     member p.AddNuGetExportingProject(proj: INuGetExportingProject) =
         let settings = { settings with Contents = Seq.append settings.Contents proj.NuGetFiles }
         NuGetPackageBuilder(settings, env)
 
     member p.AddProject(pr: IProject) =
-        let ng =
-            pr.References
-            |> Seq.choose rs.GetNuGetReference
-            |> Seq.append cfg.NuGetReferences
-            |> Seq.distinct
-            |> Seq.toList
-        let settings = { settings with PackageConfig = { settings.PackageConfig with NuGetReferences = ng } }
-        NuGetPackageBuilder(settings, env)
+        pr.References
+        |> Seq.choose rs.GetNuGetReference
+        |> p.AddNuGetRefs
 
     member p.Add<'T when 'T :> IProject and 'T :> INuGetExportingProject>(x: 'T) =
         p.AddProject(x :> IProject).AddNuGetExportingProject(x :> INuGetExportingProject)
@@ -76,7 +81,17 @@ type NuGetPackageBuilder(settings, env) =
     member p.Authors authors =
         upd { cfg with Authors = Seq.toList authors }
 
+    member p.AddPackage(pkg: NuGetPackageBuilder) =
+        p.AddNuGetRefs [pkg.SelfReference]
+
+    member p.SelfReference : INuGetReference =
+        rB.NuGet(cfg.Id).Version(string p.FullVersion) :> INuGetReference
+
+    member p.FullVersion =
+        SafeNuGetSemanticVersion(cfg.Version, ?suffix = cfg.VersionSuffix)
+
     member p.Build() =
+//        let rr = References.Current.Find(env).ResolveReferences fw refs
         let pb = SafeNuGetPackageBuilder()
         pb.Id <- cfg.Id
         cfg.LicenseUrl |> Option.iter (fun url -> pb.LicenseUrl <- Uri url)
@@ -84,7 +99,7 @@ type NuGetPackageBuilder(settings, env) =
         cfg.ProjectUrl |> Option.iter (fun url -> pb.ProjectUrl <- Uri url)
         pb.Authors <- cfg.Authors
         pb.Description <- cfg.Description
-        pb.Version <- SafeNuGetSemanticVersion(cfg.Version, ?suffix = cfg.VersionSuffix)
+        pb.Version <- p.FullVersion
         let fw = BuildConfig.CurrentFramework.Find env
         let fwt = Frameworks.Current.Find env
         pb.Files <-
@@ -95,6 +110,7 @@ type NuGetPackageBuilder(settings, env) =
         pb.DependencySets <-
             let deps =
                 cfg.NuGetReferences
+                |> Seq.map NuGetReference.Wrap
                 |> Seq.distinctBy (fun r -> r.Id)
                 |> Seq.map (fun r ->
                     let v =
@@ -123,11 +139,10 @@ type NuGetPackageBuilder(settings, env) =
         upd { cfg with ProjectUrl = Some url }
 
     interface IProject with
-        member pr.Build(rr) = pr.Build()
+        member pr.Build() = pr.Build()
         member pr.Clean() = pr.Clean()
         member pr.References = Seq.empty
         member pr.Framework = fwt.Net45
-        member pr.GeneratedAssemblyFiles = Seq.empty
         member pr.Name = settings.PackageConfig.Id
 
     static member Create(env) =
@@ -152,7 +167,7 @@ type NuGetPackageBuilder(settings, env) =
             }
         let settings =
             {
-                Contents = []
+                Contents = Seq.empty
                 PackageConfig = cfg
             }
         NuGetPackageBuilder(settings, env)
