@@ -33,7 +33,8 @@ module Identifiers =
 
         static member Create(id: string) =
             if pat.IsMatch id then { name = id } else
-                invalidArg "id" "identifier must be alphanumeric"
+                String.Format("Identifier must be alphanumeric. Given: {0}", id)
+                |> invalidArg "id"
 
 [<AutoOpen>]
 module Names =
@@ -312,4 +313,9 @@ type Log(name: Name, env: Parameters) =
         Log(Name.Parse name, env.Parameters)
 
     static member Create<'T>(env: IParametric) =
-        Log.Create(typeof<'T>.FullName, env.Parameters)
+        let name =
+            typeof<'T>.FullName
+                .Replace("+", ".")
+                .Replace("/", ".")
+                .Replace("`", "_")
+        Log.Create(name, env.Parameters)

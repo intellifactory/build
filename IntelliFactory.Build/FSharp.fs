@@ -272,6 +272,17 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
             task.Build()
         else
             log.Info("Skipping {0}", name)
+        match kind with
+        | FSharpConsoleExecutable
+        | FSharpWindowsExecutable ->
+            // deploy dependencies to outDir for executables
+            for r in rr.References do
+                if not r.IsFrameworkReference || Path.GetFileName(r.Path) = "FSharp.Core.dll" then
+                    let source = FileInfo r.Path
+                    let target = FileInfo (Path.Combine(outDir, Path.GetFileName(r.Path)))
+                    if target.Exists |> not || target.LastWriteTimeUtc < source.LastWriteTimeUtc then
+                        Content.ReadBinaryFile(source.FullName).WriteFile(target.FullName)
+        | _ -> ()
 
     member p.Clean() =
         let rm p =

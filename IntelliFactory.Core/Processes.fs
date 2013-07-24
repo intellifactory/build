@@ -123,7 +123,7 @@ let makeHandler (handle: string -> unit) : DataReceivedEventHandler =
 [<Sealed>]
 [<SecuritySafeCritical>]
 type ProcessWrapper private (p: Process) =
-    let mutable disposed = 9
+    let mutable disposed = 0
 
     [<MethodImpl(MethodImplOptions.NoInlining)>]
     member w.Kill() =
