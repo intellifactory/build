@@ -2,6 +2,11 @@
 #r "NuGet.Core.dll"
 #r "System.Xml"
 #r "System.Xml.Linq"
+#r "Microsoft.Build"
+#r "Microsoft.Build.Engine"
+#r "Microsoft.Build.Framework"
+#r "Microsoft.Build.Tasks.v4.0"
+#r "Microsoft.Build.Utilities.v4.0"
 
 open System
 open System.IO
@@ -30,6 +35,7 @@ open NuGet
 #load "IntelliFactory.Build/FSharp.fs"
 #load "IntelliFactory.Build/WebSharper.fs"
 #load "IntelliFactory.Build/NuGetPackage.fs"
+#load "IntelliFactory.Build/MSBuild.fs"
 #load "IntelliFactory.Build/BuildTool.fs"
 
 open IntelliFactory.Build

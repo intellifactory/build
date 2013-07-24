@@ -1,4 +1,18 @@
-﻿namespace IntelliFactory.Build
+﻿// Copyright 2013 IntelliFactory
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you
+// may not use this file except in compliance with the License.  You may
+// obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied.  See the License for the specific language governing
+// permissions and limitations under the License
+
+namespace IntelliFactory.Build
 
 open System
 open System.IO
@@ -172,62 +186,49 @@ type NuGetPackageBuilder(settings, env) =
             }
         NuGetPackageBuilder(settings, env)
 
-//[<Sealed>]
-//type NuGetSpecBuilder private (builder: Lazy<SafeNuGetPackageBuilder>, env) =
-//    let log = Log.Create<NuGetPackageBuilder>(env)
-//    let fw = BuildConfig.CurrentFramework.Find env
-//
-//    let pid = PackageId.Current.Find env
-//
-//    let version =
-//        lazy
-//        let v1 = builder.Value.Version
-//        let v2 =
-//            let v = PackageVersion.Current.Find env
-//            let fv = PackageVersion.Full.Find env
-//            match v.Suffix with
-//            | None -> SafeNuGetSemanticVersion(fv)
-//            | Some s -> SafeNuGetSemanticVersion(fv, s)
-//        if v1.Version > v2.Version then v1 else v2
-//
-//    let path =
-//        lazy
-//        let version = version.Value
-//        let name = String.Format("{0}.{1}.nupkg", pid, version)
-//        let out = BuildConfig.BuildDir.Find env
-//        Path.Combine(out, name)
-//
-//    let build () =
-//        let path = path.Value
-//        log.Info("Writing {0}", path)
-//        use out = File.Open(path, FileMode.Create)
-//        let b = builder.Value
-//        b.Version <- version.Value
-//        b.Save(out)
-//
-//    let clean () =
-//        File.Delete(path.Value)
-//
-//    interface IProject with
-//        member b.Build(refs) = build ()
-//        member b.Clean() = clean ()
-//        member b.Configure(f) = NuGetSpecBuilder(builder, f env) :> _
-//        member b.Framework = fw
-//        member b.GeneratedAssemblyFiles = Seq.empty
-//        member b.Name = "NuGetPackage"
-//        member b.References = Seq.empty
-//
-//    static member Create(env, nuspecFile) =
-//        let builder =
-//            lazy
-//                let root = BuildConfig.RootDir.Find env
-//                use stream = File.OpenRead(nuspecFile)
-//                SafeNuGetPackageBuilder(stream, root)
-//        NuGetSpecBuilder(builder, env)
+[<Sealed>]
+type NuGetSpecProject(env: IParametric, file: string) =
+    let log = Log.Create<NuGetSpecProject>(env)
+    let fullPath = Path.Combine(BuildConfig.RootDir.Find(env), file)
+    let fw = BuildConfig.CurrentFramework.Find env
+    let out = NuGetConfig.PackageOutputPath.Find env
+    let root = BuildConfig.RootDir.Find env
+
+    let sourceBytes = lazy File.ReadAllBytes fullPath
+
+    let getPB () =
+        use input = new MemoryStream(sourceBytes.Value, false)
+        SafeNuGetPackageBuilder(input, root)
+
+    let getNupkgPath () =
+        let builder = getPB ()
+        Path.Combine(out, String.Format("{0}.{1}.nupkg", builder.Id, builder.Version))
+
+    interface IProject with
+
+        member p.Build() =
+            let builder = getPB ()
+            let nupkg = getNupkgPath ()
+            log.Info("Writing {0}", nupkg)
+            let outBytes =
+                use output = new MemoryStream()
+                builder.Save(output)
+                output.ToArray()
+            FileSystem.Binary.FromBytes(outBytes).WriteFile(nupkg)
+
+        member p.Clean() =
+            let nupkg = getNupkgPath ()
+            if FileInfo(nupkg).Exists then
+                log.Info("Deleting {0}", nupkg)
+                File.Delete nupkg
+
+        member p.Framework = fw
+        member p.Name = Path.GetFileName fullPath
+        member p.References = Seq.empty
 
 [<Sealed>]
 type NuGetPackageTool private (env: Parameters) =
     static let current = Parameter.Define(fun env -> NuGetPackageTool env)
     member t.CreatePackage() = NuGetPackageBuilder.Create(env)
-//    member t.NuSpec(file: string) = NuGetSpecBuilder.Create(env, file) :> IProject
+    member t.NuSpec(file: string) = NuGetSpecProject(env, file)
     static member internal Current = current
