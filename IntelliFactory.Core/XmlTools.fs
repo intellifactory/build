@@ -123,8 +123,11 @@ type XmlElement =
         e.WriteTo(fun s -> XmlTextWriter.Create(w, s))
         w.ToString()
 
-    member e.WriteFile(file: string) : unit =
-        e.WriteTo(fun s -> XmlTextWriter.Create(file, s))
+    member e.WriteFile(file: string) =
+        let t =
+            e.Write()
+            |> FileSystem.Content.Text
+        t.WriteFile(file)
 
     member e.Attributes = e.AttributeMap
     member e.Children = e.ChildNodes

@@ -50,7 +50,7 @@ type ConsoleProgram() =
             @"IF NOT ""%NuGetHome%""=="""" GOTO :nuget"
             @"SET NuGetHome=tools\NuGet"
             @":nuget"
-            @"""%NuGetHome%\NuGet.exe"" install IntelliFactory.Build -pre -ExcludeVersion -o packages"
+            @"""%NuGetHome%\NuGet.exe"" install IntelliFactory.Build -pre -ExcludeVersion -o tools\packages"
             @"IF NOT ""%FSharpHome%""=="""" GOTO :fs"
             @"SET PF=%ProgramFiles(x86)%"
             @"IF NOT ""%PF%""=="""" GOTO w64"
@@ -75,9 +75,9 @@ type ConsoleProgram() =
 
     let generateIncludesFsx () =
         [
-            @"#I ""../packages/NuGet.Core/lib/net40-Client"""
-            @"#I ""../packages/IntelliFactory.Core/lib/net45"""
-            @"#I ""../packages/IntelliFactory.Build/lib/net45"""
+            @"#I ""packages/NuGet.Core/lib/net40-Client"""
+            @"#I ""packages/IntelliFactory.Core/lib/net45"""
+            @"#I ""packages/IntelliFactory.Build/lib/net45"""
             @"#r ""NuGet.Core"""
             @"#r ""IntelliFactory.Core"""
             @"#r ""IntelliFactory.Build"""
@@ -95,7 +95,7 @@ type ConsoleProgram() =
             @"export FSharpHome"
             @"export MonoHome"
             @"export NuGetHome"
-            @"mono $NuGetHome/NuGet.exe install IntelliFactory.Build -pre -ExcludeVersion -o packages"
+            @"mono $NuGetHome/NuGet.exe install IntelliFactory.Build -pre -ExcludeVersion -o tools/packages"
             @"mono $FSharpHome/fsi.exe --exec build.fsx %*"
         ]
         |> String.concat "\n"
