@@ -24,10 +24,11 @@ open System.Security
 open System.Text
 open System.Threading
 open System.Threading.Tasks
+open IntelliFactory.Core
 
 #nowarn "40"
 
-let defaultEncoding () =
+let defaultEncoding =
     UTF8Encoding(false, false)
 
 let nullCheck (n: string) (v: obj) =
@@ -79,8 +80,8 @@ type ProcessHandleConfig =
             OnExit = ignore
             OnStandardOutput = ignore
             OnStandardError = ignore
-            StandardErrorEncoding = defaultEncoding ()
-            StandardOutputEncoding = defaultEncoding ()
+            StandardErrorEncoding = defaultEncoding
+            StandardOutputEncoding = defaultEncoding
             ToolPath = toolPath
             WorkingDirectory = Directory.GetCurrentDirectory()
         }
@@ -282,8 +283,9 @@ type Message =
     | Stop
     | Stopped
 
-let startProcessService (cfg: ProcessServiceConfig) : MailboxProcessor<Message> =
+let startProcessService (cfg: ProcessServiceConfig) =
     let opts = cfg.ProcessHandleConfig
+    let finalized = Future.Create()
     MailboxProcessor<Message>.Start(fun self ->
         let stop (p: ProcessHandle) =
             async {
@@ -291,12 +293,10 @@ let startProcessService (cfg: ProcessServiceConfig) : MailboxProcessor<Message> 
                 let! c = p.ExitCode.Await()
                 return ()
             }
-        let finish (proc: option<ProcessHandle>) =
-            async {
-                match proc with
-                | Some p -> return! stop p
-                | None -> return ()
-            }
+        let finish proc =
+            match proc with
+            | None -> async.Return()
+            | Some p -> stop p
         let rec idle =
             async {
                 let! msg = self.Receive()
@@ -336,20 +336,19 @@ let startProcessService (cfg: ProcessServiceConfig) : MailboxProcessor<Message> 
                     do! Async.Sleep(int cfg.RestartInterval.TotalMilliseconds)
                     return! start []
             }
-        idle)
+        async.TryFinally(idle, fun () -> finalized.Complete()))
+    |> fun agent -> (agent, finalized)
 
 [<Sealed>]
 type ProcessService(opts) =
-    let a = startProcessService opts
+    let (a, f) = startProcessService opts
 
-    interface IDisposable with
-        member s.Dispose() = s.Dispose()
-
-    member s.Dispose() = a.Post Dispose
+    member s.Finalize() = a.Post Dispose; f.Await()
     member s.Restart() = a.Post Restart
     member s.Start() = a.Post Start
     member s.Stop() = a.Post Stop
     member s.SendInput i = a.Post (Send i)
+    member s.Disposed = f
 
     static member Create(opts: ProcessServiceConfig) =
         opts.Validate()

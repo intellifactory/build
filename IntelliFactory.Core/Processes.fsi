@@ -74,11 +74,8 @@ type ProcessServiceConfig =
 [<Sealed>]
 type ProcessService =
 
-    /// Maintains an internal system process handle.
-    interface IDisposable
-
     /// Stops the internal process and finalizes everything.
-    member Dispose : unit -> unit
+    member Finalize : unit -> Async<unit>
 
     /// Stops and re-starts the process.
     member Restart : unit -> unit

@@ -119,26 +119,9 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         :: sourceFiles
         |> List.append (Seq.toList rr.Paths)
 
-    let buildFiles =
-        [
-            ainfoPath
-            argsPath
-        ]
-
     let outputFiles =
         outputPath
         :: Option.toList docPath
-
-    let lastWrite files =
-        files
-        |> Seq.filter IsFile
-        |> Seq.map File.GetLastWriteTimeUtc
-        |> Seq.max
-
-    let requiresBuild rr =
-        Seq.append buildFiles outputFiles
-        |> Seq.exists (IsFile >> not)
-        || lastWrite outputFiles < lastWrite (inputFiles rr |> Seq.filter IsFile)
 
     let buildFS rr env =
         let t = FSharpCompilerTask(env, log, rr)
@@ -214,18 +197,28 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             File.Delete x
 
     let clean () =
+        rm argsPath
+        Option.iter rm docPath
+        rm ainfoPath
         rm outputPath1
         rm outputPath2
         rm outputPath
 
     let build () =
         let rr = References.Current.Find(fs).ResolveReferences fw project.References
-        if requiresBuild rr then
-            clean ()
+        let rd =
+            RebuildProblem.Create(fs)
+                .AddInputPaths(inputFiles rr)
+                .AddOutputPaths(outputFiles)
+                .Decide()
+        if rd.IsStale then
+            rm outputPath1
+            rm outputPath2
             FSharpProjectWriter(fs).Write(rr)
             build1 rr
             build2 rr
             build3 rr
+            rd.Touch()
         else
             log.Info("Skipping {0}", project.Name)
 

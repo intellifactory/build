@@ -16,6 +16,7 @@
 module IntelliFactory.Core.Futures
 
 open System
+open IntelliFactory.Core
 
 type FutureState<'T> =
     | FutureCompleted of 'T

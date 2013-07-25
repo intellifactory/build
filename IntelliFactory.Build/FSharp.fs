@@ -232,25 +232,8 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
         :: Seq.toList sources
         |> List.append (Seq.toList rr.Paths)
 
-    let buildFiles =
-        [
-            ainfoPath
-            argsPath
-        ]
-
     let outputFiles =
         outPath :: Option.toList docPath
-
-    let lastWrite files =
-        files
-        |> Seq.filter IsFile
-        |> Seq.map File.GetLastWriteTimeUtc
-        |> Seq.max
-
-    let requiresBuild rr =
-        Seq.append buildFiles outputFiles
-        |> Seq.exists (IsFile >> not)
-        || lastWrite outputFiles < lastWrite (inputFiles rr |> Seq.filter IsFile)
 
     member p.Build() =
         let rr = resolved.Value
@@ -268,8 +251,14 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
                 |> Seq.append [task.ToolPath]
                 |> String.concat Environment.NewLine
             Content.Text(t).WriteFile(argsPath)
-        if requiresBuild rr then
+        let rebuildDecision =
+            RebuildProblem.Create(env)
+                .AddInputPaths(inputFiles resolved.Value)
+                .AddOutputPaths(outputFiles)
+                .Decide()
+        if rebuildDecision.IsStale then
             task.Build()
+            rebuildDecision.Touch()
         else
             log.Info("Skipping {0}", name)
         match kind with
