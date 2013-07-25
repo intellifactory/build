@@ -45,5 +45,5 @@ type RebuildProblem =
     member Decide: unit -> RebuildDecision
 
     /// Constructor function.
-    static member Create : env: IParametric -> RebuildProblem
+    static member Create : env: IParametric * baseDir: string -> RebuildProblem
 

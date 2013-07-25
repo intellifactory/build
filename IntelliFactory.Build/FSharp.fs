@@ -252,7 +252,7 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
                 |> String.concat Environment.NewLine
             Content.Text(t).WriteFile(argsPath)
         let rebuildDecision =
-            RebuildProblem.Create(env)
+            RebuildProblem.Create(env, baseDir)
                 .AddInputPaths(inputFiles resolved.Value)
                 .AddOutputPaths(outputFiles)
                 .Decide()

@@ -20,8 +20,8 @@ open System.IO
 open IntelliFactory.Core
 open IntelliFactory.Build
 
-let getFile (p: string) =
-    let f = FileInfo p
+let getFile (baseDir: string) (p: string) =
+    let f = FileInfo(Path.Combine(baseDir, p))
     f.Refresh()
     f
 
@@ -66,15 +66,15 @@ let lastWrite (file: FileInfo) =
     file.LastWriteTimeUtc
 
 [<Sealed>]
-type RebuildProblem(env, input: string[], output: string[]) =
+type RebuildProblem(env, baseDir: string, input: string[], output: string[]) =
     let log = Log.Create<RebuildProblem>(env)
 
-    member p.AddInputPaths(ps) = RebuildProblem(env, addPaths ps input, output)
-    member p.AddOutputPaths(ps) = RebuildProblem(env, input, addPaths ps output)
+    member p.AddInputPaths(ps) = RebuildProblem(env, baseDir, addPaths ps input, output)
+    member p.AddOutputPaths(ps) = RebuildProblem(env, baseDir, input, addPaths ps output)
 
     member p.Decide() =
-        let input = Array.map getFile input
-        let output = Array.map getFile output
+        let input = Array.map (getFile baseDir) input
+        let output = Array.map (getFile baseDir) output
         let missing =
             output
             |> Array.tryFind (fun f -> f.Exists |> not)
@@ -102,5 +102,5 @@ type RebuildProblem(env, input: string[], output: string[]) =
                 log.Verbose msg
                 valid log output "No changed since last build."
 
-    static member Create(env) =
-        RebuildProblem(env, Array.empty, Array.empty)
+    static member Create(env, baseDir: string) =
+        RebuildProblem(env, baseDir, Array.empty, Array.empty)

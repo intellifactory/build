@@ -207,7 +207,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let build () =
         let rr = References.Current.Find(fs).ResolveReferences fw project.References
         let rd =
-            RebuildProblem.Create(fs)
+            RebuildProblem.Create(fs, baseDir)
                 .AddInputPaths(inputFiles rr)
                 .AddOutputPaths(outputFiles)
                 .Decide()
