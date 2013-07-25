@@ -21,139 +21,149 @@ open System.IO
 open System.Reflection
 open System.Security
 
-type AssemblyContext =
-    | ReflectionOnlyContext
-    | RegularContext
+[<AutoOpen>]
+[<SecuritySafeCritical>]
+module Implemetnation =
 
-type AssemblyResolution =
-    AssemblyContext -> AssemblyName -> option<Assembly>
+    let isCompatible (ref: AssemblyName) (def: AssemblyName) =
+        ref.Name = def.Name
+        && ref.Version = def.Version
 
-let isCompatible (ref: AssemblyName) (def: AssemblyName) =
-    ref.Name = def.Name
-    && ref.Version = def.Version
+    let tryFindAssembly (dom: AppDomain) (name: AssemblyName) =
+        dom.GetAssemblies()
+        |> Seq.tryFind (fun a ->
+            a.GetName()
+            |> isCompatible name)
 
-let combine a b : AssemblyResolution =
-    fun ctx name ->
-        match a ctx name with
-        | None -> b ctx name
-        | r -> r
+    let loadInto (dom: AppDomain) (path: string) =
+        File.ReadAllBytes path
+        |> dom.Load
 
-let searchDirs (dirs: seq<string>) : AssemblyResolution =
-    fun ctx name ->
-        seq {
-            for dir in dirs do
-                for ext in [".dll"; ".exe"] do
-                    let p = Path.Combine(dir, name.Name + ext)
-                    let f = FileInfo p
-                    if f.Exists then
-                        let n = AssemblyName.GetAssemblyName f.FullName
-                        if isCompatible name n then
-                            match ctx with
-                            | ReflectionOnlyContext ->
-                                yield Assembly.ReflectionOnlyLoadFrom(f.FullName)
-                            | RegularContext ->
-                                yield Assembly.LoadFrom(f.FullName)
+    type AssemblyResolution =
+        {
+            ResolvePath : AssemblyName -> option<string>
         }
+
+        member r.ResolveAssembly(dom: AppDomain)(name: AssemblyName) =
+            match tryFindAssembly dom name with
+            | None ->
+                match r.ResolvePath name with
+                | None -> None
+                | Some r -> Some (loadInto dom r)
+            | r -> r
+
+    let combine a b =
+        {
+            ResolvePath = fun name ->
+                match a.ResolvePath name with
+                | None -> b.ResolvePath name
+                | r -> r
+        }
+
+    let first xs =
+        xs
         |> Seq.tryFind (fun x -> true)
 
-let searchAssemblies (all: seq<Assembly>) : AssemblyResolution =
-    fun ctx name ->
-        all
-        |> Seq.tryFind (fun a ->
-            match ctx with
-            | ReflectionOnlyContext -> a.ReflectionOnly
-            | _ -> true
-            && isCompatible name (a.GetName()))
+    let isMatchingFile name path =
+        let f = FileInfo path
+        if f.Exists then
+            let n = AssemblyName.GetAssemblyName f.FullName
+            isCompatible n name
+        else false
 
-let searchDomain (dom: AppDomain) : AssemblyResolution =
-    fun ctx name ->
-        let a = dom.GetAssemblies()
-        searchAssemblies a ctx name
+    let searchPaths (paths: seq<string>) =
+        let paths =
+            paths
+            |> Seq.map Path.GetFullPath
+            |> Seq.toArray
+        {
+            ResolvePath = fun name ->
+                seq {
+                    for path in paths do
+                        for ext in [".dll"; ".exe"] do
+                            if Path.GetFileName path = name.Name + ext then
+                                if isMatchingFile name path then
+                                    yield path
+                }
+                |> first
+        }
+
+    let searchDirs (dirs: seq<string>) =
+        let dirs =
+            dirs
+            |> Seq.map Path.GetFullPath
+            |> Seq.toArray
+        {
+            ResolvePath = fun name ->
+                seq {
+                    for dir in dirs do
+                        for ext in [".dll"; ".exe"] do
+                            let p = Path.Combine(dir, name.Name + ext)
+                            if isMatchingFile name p then
+                                yield p
+                }
+                |> first
+        }
+
+    let memoize (root: obj) getKey f =
+        let cache = Dictionary()
+        let g x =
+            lock root <| fun () ->
+                let key = getKey x
+                match cache.TryGetValue key with
+                | true, y -> y
+                | _ ->
+                    let y = f x
+                    cache.[key] <- y
+                    y
+        g
+
+    let memoizeResolution (root: obj) (r: AssemblyResolution) =
+        let key (n: AssemblyName) = (n.Name, string n.Version)
+        { ResolvePath = memoize root key r.ResolvePath }
+
+    let zero =
+        { ResolvePath = fun name -> None }
+
+    let inline ( ++ ) a b = combine a b
 
 /// An utility for resolving assemblies from non-standard contexts.
 /// TODO: this probably belongs in Core.
 [<Sealed>]
 [<SecuritySafeCritical>]
-type AssemblyResolver(resolve: AssemblyResolution) =
+type AssemblyResolver(dom: AppDomain, reso: AssemblyResolution) =
 
     let root = obj ()
-    let cache = Dictionary()
+    let reso = memoizeResolution root reso
 
-    let resolve (ctx: AssemblyContext) (x: AssemblyName) =
-        lock root <| fun () ->
-            let key = (ctx, string x.Name, string x.Version)
-            match cache.TryGetValue key with
-            | true, y -> y
-            | _ ->
-                let y = resolve ctx x
-                cache.[key] <- y
-                y
+    static let get (x: AssemblyResolver) : AssemblyResolution = x.Resolution
 
-    static let zero () =
-        AssemblyResolver(fun _ _ -> None)
-
-    static let get (x: AssemblyResolver) : AssemblyResolution =
-        x.Resolve
-
-    let resolve1 (x: obj) (a: ResolveEventArgs) =
+    let resolve (x: obj) (a: ResolveEventArgs) =
         let name = AssemblyName(a.Name)
-        match resolve RegularContext name with
+        match reso.ResolveAssembly dom name with
         | None -> null
         | Some r -> r
 
-    let resolve2 (x: obj) (a: ResolveEventArgs) =
-        let name = AssemblyName(a.Name)
-        match resolve ReflectionOnlyContext name with
-        | None -> null
-        | Some r -> r
+    let handler = ResolveEventHandler(resolve)
 
-    let handler1 = ResolveEventHandler(resolve1)
-    let handler2 = ResolveEventHandler(resolve2)
+    member r.Install() =
+        dom.add_AssemblyResolve(handler)
 
-    /// Installs the resolver into an `AppDomain`.
-    member r.Install(?domain) =
-        let domain = defaultArg domain AppDomain.CurrentDomain
-        domain.add_AssemblyResolve(handler1)
-        domain.add_ReflectionOnlyAssemblyResolve(handler2)
+    member r.Remove() =
+        dom.remove_AssemblyResolve(handler)
 
-    /// Uninstalls the resolver from an `AppDomain`.
-    member r.Remove(?domain) =
-        let domain = defaultArg domain AppDomain.CurrentDomain
-        domain.remove_AssemblyResolve(handler1)
-        domain.remove_ReflectionOnlyAssemblyResolve(handler2)
-
-    /// Wraps an action in `Install/Remove`.
-    member r.WrapOptional(domain: option<AppDomain>)(action: unit -> 'T) =
+    member r.Wrap(action: unit -> 'T) =
         try
-            r.Install(?domain = domain)
+            r.Install()
             action ()
         finally
-            r.Remove(?domain = domain)
+            r.Remove()
 
-    member r.WrapDomain dom act =
-        r.WrapOptional (Some dom) act
+    member r.SearchDirectories ds = AssemblyResolver(dom, reso ++ searchDirs ds)
+    member r.SearchPaths ps = AssemblyResolver(dom, reso ++ searchPaths ps)
+    member r.Resolve name = reso.ResolveAssembly dom name
+    member r.ResolvePath name = reso.ResolvePath name
+    member r.Resolution = reso
 
-    member r.Wrap act =
-        r.WrapOptional None act
-
-    member private r.Resolve = resolve
-
-    static member ( + ) (a, b) =
-        AssemblyResolver.Fallback(a, b)
-
-    /// Combines two resolvers with the second one acting as fallback.
-    static member Fallback(a, b) =
-        AssemblyResolver(combine (get a) (get b))
-
-    /// Searches the given AppDomain.
-    static member SearchDomain(?domain)=
-        let domain = defaultArg domain AppDomain.CurrentDomain
-        AssemblyResolver(combine (searchDomain domain) (searchDirs [domain.BaseDirectory]))
-
-    /// Creates an assembly resolver based on the given search paths.
-    static member SearchPaths(searchPaths) =
-        AssemblyResolver(searchDirs searchPaths)
-
-    /// The `Zero` resolver always refueses to resolve.
-    static member Zero =
-        zero ()
+    static member Create(?domain) =
+        AssemblyResolver(defaultArg domain AppDomain.CurrentDomain, zero)

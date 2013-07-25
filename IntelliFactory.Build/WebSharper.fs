@@ -90,6 +90,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let snk = BuildConfig.KeyFile.Find fs
     let baseDir = FSharpConfig.BaseDir.Find fs
     let util = WebSharperUtility(fs, log)
+    let dom = BuildConfig.AppDomain.Find fs
 
     let sourceFiles =
         FSharpConfig.Sources.Find fs
@@ -150,14 +151,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         match cfg.Kind with
         | WebSharperLibrary -> ()
         | WebSharperExtension ->
-            let searchDirs =
-                Seq.distinct [
-                    for r in rr.Paths do
-                        yield Path.GetFullPath (Path.GetDirectoryName r)
-                ]
-            let aR =
-                AssemblyResolver.Fallback(AssemblyResolver.SearchDomain(),
-                    AssemblyResolver.SearchPaths searchDirs)
+            let aR = AssemblyResolver.Create(dom).SearchPaths(rr.Paths)
             aR.Wrap <| fun () ->
                 util.Execute(outputPath1,
                     [
