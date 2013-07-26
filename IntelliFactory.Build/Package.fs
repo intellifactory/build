@@ -97,7 +97,7 @@ type PackageVersion(major: int, minor: int, ?suffix: string) =
     let text =
         match suffix with
         | None -> String.Format("{0}.{1}", major, minor)
-        | Some s ->  String.Format("{0}.{1}-{2}", major, minor, suffix)
+        | Some s ->  String.Format("{0}.{1}-{2}", major, minor, s)
 
     static let current =
         let v = PackageVersion.Create(0, 0)
