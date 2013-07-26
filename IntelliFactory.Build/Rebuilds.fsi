@@ -16,6 +16,7 @@
 [<AutoOpen>]
 module internal IntelliFactory.Build.Rebuilds
 
+open System.IO
 open IntelliFactory.Core
 
 /// The response from the rebuild decision system.
@@ -36,14 +37,14 @@ type RebuildDecision =
 type RebuildProblem =
 
     /// Adds input paths to consider.
-    member AddInputPaths : seq<string> -> RebuildProblem
+    member AddInputPaths : seq<FileInfo> -> RebuildProblem
 
     /// Adds output paths to consider.
-    member AddOutputPaths : seq<string> -> RebuildProblem
+    member AddOutputPaths : seq<FileInfo> -> RebuildProblem
 
     /// Decides the problem.
-    member Decide: unit -> RebuildDecision
+    member Decide : unit -> RebuildDecision
 
     /// Constructor function.
-    static member Create : env: IParametric * baseDir: string -> RebuildProblem
+    static member Create : env: IParametric -> RebuildProblem
 

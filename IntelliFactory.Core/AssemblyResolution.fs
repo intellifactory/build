@@ -26,8 +26,7 @@ open System.Security
 module Implemetnation =
 
     let isCompatible (ref: AssemblyName) (def: AssemblyName) =
-        ref.Name = def.Name
-        && ref.Version = def.Version
+        ref.Name = def.Name && (ref.Version = null || ref.Version = def.Version)
 
     let tryFindAssembly (dom: AppDomain) (name: AssemblyName) =
         dom.GetAssemblies()

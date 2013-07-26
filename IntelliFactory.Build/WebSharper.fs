@@ -35,8 +35,30 @@ module WebSharperReferences =
 
     let Compute env =
         let rb = ReferenceBuilder.Current.Find env
-        let ws = rb.NuGet("WebSharper")
-        Seq.singleton (ws.Reference())
+        let paths =
+            [
+                "IntelliFactory.Formlet.dll"
+                "IntelliFactory.Html.dll"
+                "IntelliFactory.JavaScript.dll"
+                "IntelliFactory.Reactive.dll"
+                "IntelliFactory.WebSharper.Collections.dll"
+                "IntelliFactory.WebSharper.Control.dll"
+                "IntelliFactory.WebSharper.Core.dll"
+                "IntelliFactory.WebSharper.dll"
+                "IntelliFactory.WebSharper.Dom.dll"
+                "IntelliFactory.WebSharper.Ecma.dll"
+                "IntelliFactory.WebSharper.Formlet.dll"
+                "IntelliFactory.WebSharper.Html.dll"
+                "IntelliFactory.WebSharper.Html5.dll"
+                "IntelliFactory.WebSharper.InterfaceGenerator.dll"
+                "IntelliFactory.WebSharper.JQuery.dll"
+                "IntelliFactory.WebSharper.Sitelets.dll"
+                "IntelliFactory.WebSharper.Testing.dll"
+                "IntelliFactory.WebSharper.Web.dll"
+            ]
+            |> List.map (fun x -> "/tools/net45/" + x)
+        rb.NuGet("WebSharper").At(paths).Reference()
+        |> Seq.singleton 
 
 type WebSharperProjectConfig =
     {
@@ -78,6 +100,7 @@ type WebSharperUtility(env: IParametric, log: Log) =
         let exe = wsToolPath rr
         u.Execute(exe, args)
 
+    member u.GetWebSharperToolPath(rr) = wsToolPath rr
     member u.Home = wsHome
 
 [<Sealed>]
@@ -91,6 +114,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let baseDir = FSharpConfig.BaseDir.Find fs
     let util = WebSharperUtility(fs, log)
     let dom = BuildConfig.AppDomain.Find fs
+    let wsHome = WebSharperConfig.WebSharperHome.Find fs
 
     let sourceFiles =
         FSharpConfig.Sources.Find fs
@@ -113,16 +137,17 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let ainfoPath = Path.ChangeExtension(outputPath, ".annotations.fs")
     let argsPath = Path.ChangeExtension(outputPath, ".args.txt")
     let ver = PackageVersion.Current.Find fs
+    let rootDir = BuildConfig.RootDir.Find fs
 
     let inputFiles (rr: ResolvedReferences) =
-        ainfoPath
-        :: argsPath
-        :: sourceFiles
-        |> List.append (Seq.toList rr.Paths)
+        FileInfo argsPath
+        :: FileInfo ainfoPath
+        :: [for s in sourceFiles -> FileInfo(Path.Combine(baseDir, s))]
+        |> List.append [for r in rr.Paths -> FileInfo(Path.Combine(rootDir, r))]
 
     let outputFiles =
-        outputPath
-        :: Option.toList docPath
+        FileInfo outputPath
+        :: [for d in Option.toList docPath -> FileInfo d]
 
     let buildFS rr env =
         let t = FSharpCompilerTask(env, log, rr)
@@ -151,7 +176,8 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         match cfg.Kind with
         | WebSharperLibrary -> ()
         | WebSharperExtension ->
-            let aR = AssemblyResolver.Create(dom).SearchPaths(rr.Paths)
+            let wsHome = Path.GetDirectoryName (util.GetWebSharperToolPath rr)
+            let aR = AssemblyResolver.Create(dom).SearchDirectories([wsHome]).SearchPaths(rr.Paths)
             aR.Wrap <| fun () ->
                 util.Execute(outputPath1,
                     [
@@ -201,7 +227,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let build () =
         let rr = References.Current.Find(fs).ResolveReferences fw project.References
         let rd =
-            RebuildProblem.Create(fs, baseDir)
+            RebuildProblem.Create(fs)
                 .AddInputPaths(inputFiles rr)
                 .AddOutputPaths(outputFiles)
                 .Decide()

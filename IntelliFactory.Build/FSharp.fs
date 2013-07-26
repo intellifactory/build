@@ -218,6 +218,7 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
     let ainfoPath = Path.Combine(outDir, name + ".annotations.fs")
     let fw = BuildConfig.CurrentFramework.Find env
     let refs = FSharpConfig.References.Find env
+    let rootDir = BuildConfig.RootDir.Find env
     let resolved = lazy References.Current.Find(env).ResolveReferences fw refs
     let aid =
         let d = AssemblyInfoData.Current.Find env
@@ -227,13 +228,13 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
         { d with Title = t }
 
     let inputFiles (rr: ResolvedReferences) =
-        argsPath
-        :: ainfoPath
-        :: Seq.toList sources
-        |> List.append (Seq.toList rr.Paths)
+        FileInfo argsPath
+        :: FileInfo ainfoPath
+        :: [for s in sources -> FileInfo(Path.Combine(baseDir, s))]
+        |> List.append [for r in rr.Paths -> FileInfo(Path.Combine(rootDir, r))]
 
     let outputFiles =
-        outPath :: Option.toList docPath
+        FileInfo outPath :: [for d in Option.toList docPath -> FileInfo d]
 
     member p.Build() =
         let rr = resolved.Value
@@ -252,7 +253,7 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
                 |> String.concat Environment.NewLine
             Content.Text(t).WriteFile(argsPath)
         let rebuildDecision =
-            RebuildProblem.Create(env, baseDir)
+            RebuildProblem.Create(env)
                 .AddInputPaths(inputFiles resolved.Value)
                 .AddOutputPaths(outputFiles)
                 .Decide()

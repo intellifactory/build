@@ -20,11 +20,6 @@ open System.IO
 open IntelliFactory.Core
 open IntelliFactory.Build
 
-let getFile (baseDir: string) (p: string) =
-    let f = FileInfo(Path.Combine(baseDir, p))
-    f.Refresh()
-    f
-
 type RebuildDecision =
     {
         isStale : bool
@@ -40,10 +35,9 @@ type RebuildDecision =
         for f in d.outputs do
             f.LastWriteTimeUtc <- DateTime.UtcNow
 
-let addPaths (p1: seq<string>) (p2: seq<string>) =
+let addPaths (p1: seq<FileInfo>) (p2: seq<FileInfo>) =
     Seq.append p1 p2
-    |> Seq.filter (String.IsNullOrWhiteSpace >> not)
-    |> Seq.distinct
+    |> Seq.distinctBy (fun f -> f.FullName)
     |> Seq.toArray
 
 let stale (log: Log) outputs (reason: string) =
@@ -65,16 +59,19 @@ let valid (log: Log) outputs (reason: string) =
 let lastWrite (file: FileInfo) =
     file.LastWriteTimeUtc
 
+let refresh (f: FileInfo) =
+    f.Refresh()
+
 [<Sealed>]
-type RebuildProblem(env, baseDir: string, input: string[], output: string[]) =
+type RebuildProblem(env, input: FileInfo[], output: FileInfo[]) =
     let log = Log.Create<RebuildProblem>(env)
 
-    member p.AddInputPaths(ps) = RebuildProblem(env, baseDir, addPaths ps input, output)
-    member p.AddOutputPaths(ps) = RebuildProblem(env, baseDir, input, addPaths ps output)
+    member p.AddInputPaths(ps: seq<FileInfo>) = RebuildProblem(env, addPaths ps input, output)
+    member p.AddOutputPaths(ps: seq<FileInfo>) = RebuildProblem(env, input, addPaths ps output)
 
     member p.Decide() =
-        let input = Array.map (getFile baseDir) input
-        let output = Array.map (getFile baseDir) output
+        Array.iter refresh input
+        Array.iter refresh output
         let missing =
             output
             |> Array.tryFind (fun f -> f.Exists |> not)
@@ -102,5 +99,5 @@ type RebuildProblem(env, baseDir: string, input: string[], output: string[]) =
                 log.Verbose msg
                 valid log output "No changed since last build."
 
-    static member Create(env, baseDir: string) =
-        RebuildProblem(env, baseDir, Array.empty, Array.empty)
+    static member Create(env) =
+        RebuildProblem(env, Array.empty, Array.empty)
