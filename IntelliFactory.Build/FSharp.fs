@@ -117,7 +117,6 @@ type FSharpProjectWriter(x: IParametric) =
                             let n = AssemblyName.GetAssemblyName(r)
                             yield xg?Reference + ["Include", string n.Name] - [
                                 xg?HintPath -- Path.GetFullPath(Path.Combine(rootDir, r))
-                                xg?Private -- "False"
                             ]
                     ]
                 ]
