@@ -155,6 +155,7 @@ type FSharpCompilerTask(env: Parameters, log: Log, rr: ResolvedReferences) =
     let args =
         [|
             yield getProjTypeArg kind
+            yield "--define:TRACE"
             yield "--noframework"
             yield "--out:" + outPath
             match docPath with
