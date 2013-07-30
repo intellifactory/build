@@ -345,52 +345,48 @@ type NuGetResolver private (env) =
         packages
 
     let installPkgSet (rs: seq<INuGetReference>) =
-
-        let getSpec (ref: INuGetReference) =
-            { id = ref.PackageId; version = ref.PackageVersion }
-
-        let findLocalPackageExact pid ver =
-            pm.LocalRepository.FindExact(pid, ver)
-
-        let findLocalPackage spec =
-            let pid = spec.id
-            match spec.version with
-            | Some ver -> findLocalPackageExact pid (SafeNuGetSemanticVersion.Parse ver)
-            | None -> pm.LocalRepository.FindById(pid)
-
-        let installSpecific pid ver =
-            pm.InstallExact(pid, ver)
-            pm.LocalRepository.FindById(pid)
-
-        let installBySpec spec =
-            let pid = spec.id
-            match spec.version with
-            | None ->
+        let findLatestPackageById (pid: string) =
+            let pkgs =
+                pm.SourceRepository.FindPackagesById pid
+                |> Seq.toList
+            match pkgs with
+            | [] ->
+                log.Warn("Could not resolve package: {0}", pid)
+                None
+            | pkgs ->
                 let pkg =
-                    pm.SourceRepository.FindPackagesById pid
-                    |> Seq.toList
-                match pkg with
-                | [] ->
-                    log.Warn("Could not resolve package: {0}", pid)
-                    None
-                | pkgs ->
-                    let pkg =
-                        pkgs
-                        |> Seq.maxBy (fun pkg -> pkg.Version.Version)
-                    pm.Install pkg
-                    Some pkg
-            | Some ver ->
-                let vn = SafeNuGetSemanticVersion.Parse ver
-                installSpecific pid vn
-
-        let ensureInstalledSpec spec =
-            match findLocalPackage spec with
+                    pkgs
+                    |> Seq.maxBy (fun pkg -> pkg.Version.Version)
+                log.Verbose("Latest package: {0} --> {1}", pkg.Id, pkg.Version)
+                Some pkg
+        let findExact pid ver =
+            pm.LocalRepository.FindExact(pid, ver,
+                allowPreRelease = ver.SpecialVersion.IsSome,
+                allowUnlisted = true)
+        let install pid ver =
+            pm.InstallExact(pid, ver)
+            findExact pid ver
+        let ensureInstalled pid ver =
+            match findExact pid ver with
             | Some pkg -> Some pkg
-            | None -> installBySpec spec
-
-        rs
-        |> Seq.choose (fun r ->
-            ensureInstalledSpec (getSpec r))
+            | None -> install pid ver
+        seq {
+            for r in rs do
+                let pid = r.PackageId
+                let ver =
+                    match r.PackageVersion with
+                    | None ->
+                        match findLatestPackageById pid with
+                        | Some pkg -> Some pkg.Version
+                        | None -> None
+                    | Some v -> Some (SafeNuGetSemanticVersion.Parse v)
+                match ver with
+                | Some ver ->
+                    match ensureInstalled pid ver with
+                    | None -> ()
+                    | Some pkg -> yield pkg
+                | None -> ()
+        }
         |> Reify
 
     let applyRule fw (set: PackageSet) (r: INuGetReference) =

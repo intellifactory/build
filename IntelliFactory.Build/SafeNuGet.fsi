@@ -67,7 +67,7 @@ type internal SafeNuGetPackage =
 [<Sealed>]
 type internal SafePackageRepository =
     member FindByDependency : dep: SafeNuGetPackageDependency * ?allowPreRelease: bool * ?allowUnlisted: bool -> option<SafeNuGetPackage>
-    member FindById : id: string -> option<SafeNuGetPackage>
+//    member FindById : id: string -> option<SafeNuGetPackage>
     member FindPackagesById : id: string -> seq<SafeNuGetPackage>
     member FindExact : id: string * ver: SafeNuGetSemanticVersion * ?allowPreRelease: bool * ?allowUnlisted: bool -> option<SafeNuGetPackage>
 
