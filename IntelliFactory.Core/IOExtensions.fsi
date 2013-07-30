@@ -25,8 +25,4 @@ open System.Threading
 type TextWriter with
 
     /// Constructs a writer that sends characters to a given function.
-    static member NonBlocking :
-        (string -> unit)
-        * ?bufferSize: int
-        * ?encoding: Encoding ->
-        TextWriter
+    static member NonBlocking : out: (string -> unit) * ?config: TextPipes.NonBlockingTextWriterConfig -> TextWriter

@@ -23,23 +23,100 @@ open System.Threading.Tasks
 
 #nowarn "40"
 
-type TextWriterMessage =
+type TextMessage =
     | OnClose
     | OnFlush
     | OnWrite of string
     | OnWriteLine of string
 
+type NonBlockingTextWriterConfig =
+    {
+        BufferSize : int
+        Encoding : Encoding
+        FlushInterval : TimeSpan
+        NewLine : string
+    }
+
+    static member Default =
+        {
+            BufferSize = 1024
+            Encoding = FileSystem.DefaultEncoding
+            FlushInterval = TimeSpan.FromSeconds 1.
+            NewLine = "\n"
+        }
+
+type Conf = NonBlockingTextWriterConfig
+
+module Buffer =
+
+    [<Sealed>]
+    type private BufferState(out: TextMessage -> unit, cfg) =
+        let b = new StringBuilder(cfg.BufferSize)
+        let nl = cfg.NewLine
+        let mutable isClosed = false
+
+        let write (t: string) =
+            if not isClosed then
+                b.Append(t) |> ignore
+
+        let writeLine (t: string) =
+            if not isClosed then
+                b.Append(t) |> ignore
+                b.Append(nl) |> ignore
+
+        let flush () =
+            if not isClosed then
+                match b.Length with
+                | 0 -> ()
+                | _ -> OnWrite (b.Reset()) |> out
+
+        let close () =
+            if not isClosed then
+                flush ()
+                isClosed <- true
+                out OnClose
+
+        member x.Dispatch msg =
+            if not isClosed then
+                match msg with
+                | OnClose -> close ()
+                | OnFlush -> flush ()
+                | OnWrite t -> write t
+                | OnWriteLine t -> writeLine t
+
+        member x.IsClosed  =
+            isClosed
+
+    [<Sealed>]
+    type Agent private (m: MailboxProcessor<TextMessage>) =
+
+        static let reset : TimerCallback =
+            TimerCallback (fun (x: obj) ->
+                let a = x :?> MailboxProcessor<TextMessage>
+                a.Post OnFlush)
+
+        member x.Post msg = m.Post msg
+
+        static member Start(cfg, out) =
+            let t = cfg.FlushInterval
+            let a =
+                MailboxProcessor.Start(fun agent ->
+                    async {
+                        let buf = BufferState(out, cfg)
+                        let interval = int t.TotalMilliseconds
+                        use timer = new Timer(reset, agent, interval, interval)
+                        while not buf.IsClosed do
+                            let! msg = agent.Receive()
+                            do buf.Dispatch msg
+                    })
+            Agent a
+
 [<Sealed>]
-type FunctionTextWriter(i: TextWriterMessage -> unit, ?enc) =
+type FunctionTextWriter(i: TextMessage -> unit, cfg) =
     inherit TextWriter()
 
-    let enc =
-        match enc with
-        | None -> UTF8Encoding(false, true) :> Encoding
-        | Some enc -> enc
-
-    let task x =
-        Task.FromResult x :> Task
+    static let task x = Task.FromResult x :> Task
+    let enc = cfg.Encoding
 
     override w.Close() = i OnClose
 
@@ -69,40 +146,15 @@ type FunctionTextWriter(i: TextWriterMessage -> unit, ?enc) =
 [<Sealed>]
 type NonBlockingTextWriter =
 
-    static member Create(out: string -> unit, ?bufferSize: int, ?encoding) =
-        let size = defaultArg bufferSize (8 * 1024)
-        let agent =
-            MailboxProcessor.Start(fun agent ->
-                let buf = StringBuilder(size)
-                let flush () =
-                    let s = buf.Reset()
-                    if s.Length > 0 then
-                        out s
-                let autoFlush () =
-                    if buf.Length >= size then
-                        flush ()
-                let rec loop =
-                    async {
-                        let! msg = agent.Receive()
-                        match msg with
-                        | OnClose ->
-                            do flush ()
-                            do out ""
-                            return ()
-                        | OnFlush ->
-                            do flush ()
-                            return! loop
-                        | OnWrite t ->
-                            do buf.Append(t) |> ignore
-                            do autoFlush ()
-                            return! loop
-                        | OnWriteLine t ->
-                            do buf.AppendLine(t) |> ignore
-                            do autoFlush ()
-                            return! loop
-                    }
-                loop)
-        new FunctionTextWriter(agent.Post, ?enc = encoding) :> TextWriter
+    static member Create(out: string -> unit, ?cfg) =
+        let cfg = defaultArg cfg Conf.Default
+        let output msg =
+            match msg with
+            | OnWrite t -> out t
+            | OnClose -> out ""
+            | _ -> ()
+        let agent = Buffer.Agent.Start(cfg, output)
+        new FunctionTextWriter(agent.Post, cfg) :> TextWriter
 
 [<AutoOpen>]
 module TextPipes =
@@ -120,12 +172,10 @@ module TextPipes =
         | OnRead of ReadCont
         | OnWrite of string
 
-    type ReadConts = BatchedQueues.BatchedQueue<ReadCont>
-
     type PipeState =
         | PipeEmpty
         | PipeFull
-        | PipeWaiting of ReadConts
+        | PipeWaiting of ReadCont
 
     [<Sealed>]
     type PipeAgent() =
@@ -136,37 +186,29 @@ module TextPipes =
             let k = b.Dequeue r.Buf
             Async.Spawn(r.OnDone, k)
             match b.Length with
-            | 0 -> true
-            | _ -> false
-
-        let rec feedMany rs =
-            match rs with
-            | BatchedQueues.With (x, xs) ->
-                if emptyBuf x then PipeWaiting xs else feedMany xs
-            | BatchedQueues.Empty ->
-                if b.Length = 0 then PipeEmpty else PipeFull
+            | 0 -> PipeEmpty
+            | _ -> PipeFull
 
         member a.Read r st =
             match st with
-            | PipeEmpty -> PipeWaiting (BatchedQueues.BatchedQueue().Enqueue(r))
-            | PipeFull -> if emptyBuf r then PipeEmpty else PipeFull
-            | PipeWaiting q -> PipeWaiting(q.Enqueue r)
+            | PipeEmpty -> PipeWaiting r
+            | PipeFull -> emptyBuf r
+            | PipeWaiting q -> failwith "TextPipe can serve only one reader"
 
         member a.WriteString (data: string) st =
             if data.Length > 0 then
                 b.Append(data) |> ignore
                 match st with
                 | PipeEmpty | PipeFull -> PipeFull
-                | PipeWaiting rs -> feedMany rs
+                | PipeWaiting r -> emptyBuf r
             else st
 
         member a.Done st =
             match st with
             | PipeEmpty -> ()
             | PipeFull -> ()
-            | PipeWaiting rs ->
-                for r in rs do
-                    Async.Spawn(r.OnDone, 0)
+            | PipeWaiting r ->
+                Async.Spawn(r.OnDone, 0)
 
     let startAgent () =
         MailboxProcessor.Start(fun self ->
@@ -214,11 +256,16 @@ module TextPipes =
                 |> Async.StartAsTask
 
 [<Sealed>]
-type TextPipe private (?buf, ?enc) =
+type TextPipe private (cfg: Conf) =
     let agent = startAgent ()
     let r = new PipeReader(agent) :> TextReader
-    let send s = agent.Post(OnWrite s)
-    let w = NonBlockingTextWriter.Create(send, ?bufferSize = buf, ?encoding = enc)
+
+    let send s =
+        match s with
+        | "" -> agent.Post OnDone
+        | _ -> agent.Post(OnWrite s)
+
+    let w = NonBlockingTextWriter.Create(send, cfg)
 
     member x.Close() =
         agent.Post OnDone
@@ -227,6 +274,6 @@ type TextPipe private (?buf, ?enc) =
     member x.Reader = r
     member x.Writer = w
 
-    static member Create(?bufferSize, ?encoding) =
-        TextPipe(?buf = bufferSize, ?enc = encoding)
+    static member Create(?cfg: Conf) =
+        TextPipe(defaultArg cfg Conf.Default)
 

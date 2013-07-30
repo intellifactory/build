@@ -20,25 +20,43 @@ open System
 open System.IO
 open System.Text
 
+/// Configures `NonBlockingTextWriter` (see below).
+type NonBlockingTextWriterConfig =
+    {
+        /// Default: 1024.
+        BufferSize : int
+
+        /// Encoding used in `TextWriter.Encoding` - informational use only.
+        Encoding : Encoding
+
+        /// The interval at which the internal timer fires to flush the buffer. Defaults to 1 second.
+        FlushInterval : TimeSpan
+
+        /// The newline string to use. Defaults to "\n" for symmetry with `ReadLine` implementation on `TextReader`.
+        NewLine : string
+    }
+
+    /// The default configuration.
+    static member Default : NonBlockingTextWriterConfig
+
 /// Implements writing as message-passing.
 /// Writers created with this class are thread-safe.
 [<Sealed>]
 type NonBlockingTextWriter =
 
-    /// Constructs a new writer with an optional custom buffer size and
-    /// encoding (for the `Encoding` member only).
+    /// Constructs a new writer that does not block when written to.
     /// Continuation is invoked in a single-threaded manner.
     /// It should not block or raise exceptions.
     /// All strings passed to the continuation are non-null and non-empty.
-    /// An empty string signals the last write before the writer is closed.
-    static member Create : (string -> unit) * ?bufferSize: int * ?encoding: Encoding -> TextWriter
+    /// An empty string signals that the writer is closed.
+    static member Create : out: (string -> unit) * ?config: NonBlockingTextWriterConfig -> TextWriter
 
 /// Thread-safe text pipe with two ends - a reader and a writer.
 /// Writes are non-blocking, the pipe accumulates without bounds.
 /// Reads "block" by queuing continuations in the pipe.
 /// Asynchronous reads are preferred, as they involve
 /// more efficient continuation representations:
-/// blocked readers use less memory.
+/// waiting async readers use less memory than blocking readers.
 [<Sealed>]
 type TextPipe =
 
@@ -52,6 +70,4 @@ type TextPipe =
     member Writer : TextWriter
 
     /// Creates a new text pipe. Parameters configure the `NonBlockingTextWriter`.
-    static member Create : ?bufferSize: int * ?encoding: Encoding -> TextPipe
-
-(* TOOD: TextPipe.Reader.ReadLine uses wrong \n-based algorithm, does not match TextPipe.TextWriter.WriteLine *)
+    static member Create : ?config: NonBlockingTextWriterConfig -> TextPipe

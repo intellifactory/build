@@ -18,33 +18,15 @@ module IntelliFactory.Core.Processes
 
 open System
 open System.Text
-open System.Threading.Tasks
 
-/// Various options for starting processes.
-type ProcessHandleConfig =
-    {
-        Arguments : string
-        EnvironmentVariables : Map<string,string>
-        OnExit : int -> unit
-        OnStandardOutput : string -> unit
-        OnStandardError : string -> unit
-        StandardErrorEncoding : Encoding
-        StandardOutputEncoding : Encoding
-        ToolPath : string
-        WorkingDirectory : string
-    }
-
-/// Wraps a started operating system process.
+/// Wraps an operating system process.
 [<Sealed>]
 type ProcessHandle =
 
-    /// Disposing of the handle kills the OS process and releases resources.
+    /// Contains native resources.
     interface IDisposable
 
-    /// Kills the OS process and releases resources.
-    member Dispose : unit -> unit
-
-    /// The exit code of the current process, available when the process finishes
+    /// The exit code of the current process, available when the process finishes.
     member ExitCode : Future<int>
 
     /// Kills the process.
@@ -53,24 +35,30 @@ type ProcessHandle =
     /// Sends text on the standard input.
     member SendInput : string -> unit
 
-    /// Starts a new system process.
-    static member Start : ProcessHandleConfig -> ProcessHandle
+    /// Creates a default configuration record.
+    static member Configure : toolPath: string * ?args: string -> ProcessHandleConfig
 
-    /// Starts a new system process.
-    static member Start :
-        toolPath: string
-        * ?args: string
-        * ?config: (ProcessHandleConfig -> ProcessHandleConfig) ->
-        ProcessHandle
-
-/// Options for starting a `ProcessService`.
-type ProcessServiceConfig =
+/// Various options for starting processes.
+and ProcessHandleConfig =
     {
-        ProcessHandleConfig : ProcessHandleConfig
-        RestartInterval : TimeSpan
+        Arguments : string
+        EnvironmentVariables : Map<string,string>
+        OnExit : int -> unit
+        OnStandardError : string -> unit
+        OnStandardOutput : string -> unit
+        StandardErrorEncoding : Encoding
+        StandardInputEncoding : Encoding
+        StandardOutputEncoding : Encoding
+        ToolPath : string
+        TraceError : exn -> unit
+        WorkingDirectory : string
     }
 
-/// Wraps a system process as a service.
+    /// Starts a process based on the current configuration.
+    member Start : unit -> ProcessHandle
+
+/// Manages an operating system process, including automatically
+/// starting it on first input and automaticlaly restarting it on failure.
 [<Sealed>]
 type ProcessService =
 
@@ -80,21 +68,28 @@ type ProcessService =
     /// Stops and re-starts the process.
     member Restart : unit -> unit
 
-    /// Starts the process, if in idle state. Does nothing if the process is already started.
-    member Start : unit -> unit
-
-    /// Stops the proces with a hard kill.
-    member Stop : unit -> unit
-
     /// Sends text on the standard input. Starts the process if not started.
     member SendInput : string -> unit
 
-    /// Creates a new ProcessService. It will be started on first input or explicitly.
-    static member Create : ProcessServiceConfig -> ProcessService
+    /// Starts the process, if in idle state. Does nothing if the process is already started.
+    member Start : unit -> unit
+
+    /// Stops the proces with `Kill`.
+    member Stop : unit -> unit
 
     /// Creates a new ProcessService. It will be started on first input or explicitly.
-    static member Create :
-        toolPath: string
-        * ?args: string
-        * ?config: (ProcessServiceConfig -> ProcessServiceConfig) ->
-        ProcessService
+    static member Configure : toolPath: string * ?args: string -> ProcessServiceConfig
+
+/// Options for `ProcessService`.
+and ProcessServiceConfig =
+    {
+        ProcessHandleConfig : ProcessHandleConfig
+        RestartInterval : TimeSpan
+    }
+     
+    /// Functionally updates the `ProcessHandleConfig` field.
+    member Configure : (ProcessHandleConfig -> ProcessHandleConfig) -> ProcessServiceConfig
+
+    /// Creates a `ProcessService` in stopped state.
+    member Create : unit -> ProcessService
+
