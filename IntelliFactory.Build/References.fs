@@ -344,21 +344,25 @@ type NuGetResolver private (env) =
         Seq.iter visit ps
         packages
 
+    static let latestKey = CacheKey()
+
     let installPkgSet (rs: seq<INuGetReference>) =
         let findLatestPackageById (pid: string) =
-            let pkgs =
-                pm.SourceRepository.FindPackagesById pid
-                |> Seq.toList
-            match pkgs with
-            | [] ->
-                log.Warn("Could not resolve package: {0}", pid)
-                None
-            | pkgs ->
-                let pkg =
-                    pkgs
-                    |> Seq.maxBy (fun pkg -> pkg.Version.Version)
-                log.Verbose("Latest package: {0} --> {1}", pkg.Id, pkg.Version)
-                Some pkg
+            pid
+            |> cache.Lookup latestKey (fun () ->
+                let pkgs =
+                    pm.SourceRepository.FindPackagesById pid
+                    |> Seq.toList
+                match pkgs with
+                | [] ->
+                    log.Warn("Could not resolve package: {0}", pid)
+                    None
+                | pkgs ->
+                    let pkg =
+                        pkgs
+                        |> Seq.maxBy (fun pkg -> pkg.Version.Version)
+                    log.Verbose("Latest package: {0} --> {1}", pkg.Id, pkg.Version)
+                    Some pkg)
         let findExact pid ver =
             pm.LocalRepository.FindExact(pid, ver,
                 allowPreRelease = ver.SpecialVersion.IsSome,
