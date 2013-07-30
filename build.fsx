@@ -47,7 +47,7 @@ let common =
     |> Logs.Config.Custom (Logs.Default.Verbose().ToConsole())
 
 let core =
-    common.PackageId("IntelliFactory.Core", "0.1")
+    common.PackageId("IntelliFactory.Core", "0.2")
 
 let build =
     common.PackageId("IntelliFactory.Build", "0.2")
