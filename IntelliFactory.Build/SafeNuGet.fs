@@ -176,6 +176,14 @@ type SafePackageRepository(pr: IPackageRepository) =
         pr.FindPackage(pid, ver.SemanticVersion, allowPreRelease, allowUnlisted)
         |> SafeNuGetPackage.Create
 
+    member r.FindPackagesById(pid: string) =
+        let r = ResizeArray()
+        for p in pr.FindPackagesById(pid) do
+            match SafeNuGetPackage.Create p with
+            | None -> ()
+            | Some x -> r.Add x
+        r.ToArray() :> seq<_>
+
     member r.FindById(pid: string) =
         pr.FindPackage(pid)
         |> SafeNuGetPackage.Create

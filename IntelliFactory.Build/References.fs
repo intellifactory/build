@@ -366,12 +366,17 @@ type NuGetResolver private (env) =
             let pid = spec.id
             match spec.version with
             | None ->
-                let pkg = pm.SourceRepository.FindById(pid)
+                let pkg =
+                    pm.SourceRepository.FindPackagesById pid
+                    |> Seq.toList
                 match pkg with
-                | None ->
+                | [] ->
                     log.Warn("Could not resolve package: {0}", pid)
                     None
-                | Some pkg ->
+                | pkgs ->
+                    let pkg =
+                        pkgs
+                        |> Seq.maxBy (fun pkg -> pkg.Version.Version)
                     pm.Install pkg
                     Some pkg
             | Some ver ->
