@@ -94,7 +94,13 @@ type FSharpProjectParser(env: IParametric) =
                 match el.Attribute(XName.Get("Include")) with
                 | null -> ()
                 | a ->
-                    yield! Directory.GetFiles(Path.GetFullPath baseDir, a.Value)
+                    let p = a.Value
+                    if p.Contains "*" then
+                        yield! Directory.GetFiles(Path.GetFullPath baseDir, p)
+                    else
+                        let fullPath = Path.Combine(Path.GetFullPath baseDir, p)
+                        if File.Exists fullPath then
+                            yield fullPath
         }
         |> Reify
 
