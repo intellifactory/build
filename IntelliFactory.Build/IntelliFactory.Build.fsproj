@@ -47,6 +47,7 @@
     <Compile Include="Solutions.fs" />
     <Compile Include="Rebuilds.fsi" />
     <Compile Include="Rebuilds.fs" />
+    <Compile Include="FSharpCompiler.fs" />
     <Compile Include="FSharp.fsi" />
     <Compile Include="FSharp.fs" />
     <Compile Include="WebSharper.fsi" />

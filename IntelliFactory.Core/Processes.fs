@@ -12,6 +12,7 @@
 // implied.  See the License for the specific language governing
 // permissions and limitations under the License.
 
+[<AutoOpen>]
 module IntelliFactory.Core.Processes
 
 open System
@@ -293,6 +294,7 @@ type ProcessSerivceMessage =
     | Start
     | Stop
     | Stopped
+    | StopAsync of AsyncReplyChannel<unit>
 
 [<Sealed>]
 type ProcessServiceState
@@ -322,6 +324,9 @@ type ProcessServiceState
             | Restart | Start -> return! s.Start []
             | Send msg -> return! s.Start [msg]
             | Send _ | Stop | Stopped -> return! s.Idle
+            | StopAsync k ->
+                do k.Reply()
+                return! s.Idle
         }
 
     member s.Running p =
@@ -340,6 +345,10 @@ type ProcessServiceState
                 return! s.Running p
             | Stop ->
                 do! stop p
+                return! s.Idle
+            | StopAsync k ->
+                do! stop p
+                do k.Reply()
                 return! s.Idle
             | Stopped ->
                 do! Async.Sleep(int restartInterval.TotalMilliseconds)
@@ -372,6 +381,7 @@ type ProcessService(opts) =
     member s.Restart() = a.Post Restart
     member s.Start() = a.Post Start
     member s.Stop() = a.Post Stop
+    member s.StopAsync() = a.PostAndAsyncReply StopAsync
     member s.SendInput i = a.Post (Send i)
     member s.Disposed = f
 

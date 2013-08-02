@@ -15,6 +15,7 @@
 [<AutoOpen>]
 module IntelliFactory.Core.AutoExports
 
+open IntelliFactory.Core
 type AtomicReference = AtomicReferences.AtomicReference
 type AtomicReference<'T when 'T : not struct> = AtomicReferences.AtomicReference<'T>
 type BatchedQueue<'T> = BatchedQueues.BatchedQueue<'T>

@@ -290,6 +290,8 @@ type WebSharperHostWebsite(env: IParametric) =
                     let fc = FileSystem.Content.ReadBinaryFile p
                     fc.WriteFile(Path.Combine(binDir, Path.GetFileName p))
                     refs.Add p
+            let fpw = FSharpProjectWriter(env)
+            fpw.Write rr
             util.ExecuteWebSharper(rr,
                 [
                     yield "-unpack"

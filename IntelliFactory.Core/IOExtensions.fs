@@ -13,12 +13,14 @@
 // permissions and limitations under the License.
 
 /// Extensions to `System.IO` types.
+[<AutoOpen>]
 module IntelliFactory.Core.IOExtensions
 
 open System
 open System.IO
 open System.Text
 open System.Threading
+open IntelliFactory.Core
 
 #nowarn "40"
 

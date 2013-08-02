@@ -22,14 +22,16 @@ open IntelliFactory.Core
 [<Sealed>]
 type ConsoleProgram() =
 
+    let env =
+        Parameters.Default()
+        |> Logs.Config.Custom (Logs.Default.Info().ToConsole())
+
     let log =
-        let env =
-            Parameters.Default()
-            |> Logs.Config.Custom (Logs.Default.Info().ToConsole())
         Log.Create("IB", env)
 
     let writeUsage () =
-        log.Error("Usage: IB.exe prepare")
+        log.Error("Usage: IB.exe prepare - prepares the current folder by generating boilerplate")
+        log.Error("Otherwise IB.exe dispatches to build.fsx")
 
     let ensure file (c: FileSystem.Content) =
         if c.EnsureFile(file) then
@@ -119,14 +121,45 @@ type ConsoleProgram() =
         generateBuildSh ()
         generateBuildFsx ()
 
+    let dispatchToScript (args: seq<string>) =
+        let out = "build/build.exe"
+        let job =
+            FSharpCompiler.Job
+                .Configure(out)
+                .Configure(fun c ->
+                    { c with
+                        Flags = FSharpCompiler.Flags.NoFramework
+                        Parameters = env
+                        SourcePaths = ["build.fsx"]
+                        ReferencePaths =
+                            [
+                                typedefof<list<_>>.Assembly.Location
+                                "tools/packages/IntelliFactory.Core/lib/net45/IntelliFactory.Core.dll"
+                                "tools/packages/IntelliFactory.Build/lib/net45/IntelliFactory.Build.dll"
+                            ]
+                        Target = FSharpCompiler.Exe
+                        Platform = FSharpCompiler.AnyCPU
+                    })
+        let res = job.Build()
+        if res.IsError then -1 else
+            AppDomain.CurrentDomain.ExecuteAssembly(out, Seq.toArray args)
+
     /// Implements the entry-point method returning the exit code.
     member e.Start(args: seq<string>) : int =
+        let isHelp = function
+            | "-h" | "-help" | "--help" | "/help" | "/h" | "/?" -> true
+            | _ -> false
         let args = Seq.toList args
         match args with
         | ["prepare"] ->
             prepare ()
             0
-        | _ ->
+        | "prepare" :: _ ->
             writeUsage ()
             1
+        | [x] when isHelp x ->
+            writeUsage ()
+            0
+        | args ->
+            dispatchToScript args
 

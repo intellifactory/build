@@ -441,21 +441,16 @@ type FSharpInteractive(env) =
                 yield! defaultArg args Seq.empty
             ]
             |> String.concat " "
-        /// TODO: better process management.
-        let psi = ProcessStartInfo(fsiToolPath, args)
-        psi.RedirectStandardError <- true
-        psi.RedirectStandardInput <- true
-        psi.RedirectStandardOutput <- true
-        psi.CreateNoWindow <- true
-        psi.UseShellExecute <- false
-        psi.WindowStyle <- ProcessWindowStyle.Hidden
-        let proc = Process.Start(psi)
-        proc.WaitForExit()
-        proc.StandardOutput.ReadToEnd()
-        |> stdout.Write
-        proc.StandardError.ReadToEnd()
-        |> stderr.Write
-        let exitCode = proc.ExitCode
+        let pc =
+            {
+                ProcessHandle.Configure(fsiToolPath, args) with
+                    OnStandardError = stderr.Write
+                    OnStandardOutput = stdout.Write
+            }
+        let ph = pc.Start()
+        let exitCode =
+            ph.ExitCode.Await()
+            |> Async.RunSynchronously
         if exitCode <> 0 then
             failwithf "Non-zero exit code: %i" exitCode
 

@@ -20,6 +20,7 @@ open System.IO
 open System.Text
 open System.Threading
 open System.Threading.Tasks
+open IntelliFactory.Core
 
 #nowarn "40"
 
@@ -146,8 +147,8 @@ type FunctionTextWriter(i: TextMessage -> unit, cfg) =
 [<Sealed>]
 type NonBlockingTextWriter =
 
-    static member Create(out: string -> unit, ?cfg) =
-        let cfg = defaultArg cfg Conf.Default
+    static member Create(out: string -> unit, ?config) =
+        let cfg = defaultArg config Conf.Default
         let output msg =
             match msg with
             | OnWrite t -> out t
@@ -274,6 +275,6 @@ type TextPipe private (cfg: Conf) =
     member x.Reader = r
     member x.Writer = w
 
-    static member Create(?cfg: Conf) =
-        TextPipe(defaultArg cfg Conf.Default)
+    static member Create(?config: Conf) =
+        TextPipe(defaultArg config Conf.Default)
 

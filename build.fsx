@@ -20,6 +20,16 @@ open NuGet
 #load "IntelliFactory.Core/FileSystem.fs"
 #load "IntelliFactory.Core/XmlTools.fs"
 #load "IntelliFactory.Core/AssemblyResolution.fs"
+#load "IntelliFactory.Core/BatchedQueues.fs"
+#load "IntelliFactory.Core/AtomicReferences.fs"
+#load "IntelliFactory.Core/TaskExtensions.fs"
+#load "IntelliFactory.Core/TextExtensions.fs"
+#load "IntelliFactory.Core/AsyncExtensions.fs"
+#load "IntelliFactory.Core/Futures.fs"
+#load "IntelliFactory.Core/TextPipes.fs"
+#load "IntelliFactory.Core/IOExtensions.fs"
+#load "IntelliFactory.Core/Processes.fs"
+#load "IntelliFactory.Core/AutoExports.fs"
 #load "IntelliFactory.Build/Cache.fs"
 #load "IntelliFactory.Build/Frameworks.fs"
 #load "IntelliFactory.Build/Utilities.fs"
@@ -86,6 +96,7 @@ let buildTool =
                 rt.Project(buildLib)
                 rt.NuGet("NuGet.Core").Version("2.6.0").Reference()
             ])
+    |> FSharpConfig.OtherFlags.Custom ["--platform:x86"]
 
 let corePkg =
     core.NuGet.CreatePackage()

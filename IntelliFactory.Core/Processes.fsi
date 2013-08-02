@@ -77,6 +77,9 @@ type ProcessService =
     /// Stops the proces with `Kill`.
     member Stop : unit -> unit
 
+    /// Stops the process and awaits until it is killed.
+    member StopAsync : unit -> Async<unit>
+
     /// Creates a new ProcessService. It will be started on first input or explicitly.
     static member Configure : toolPath: string * ?args: string -> ProcessServiceConfig
 
