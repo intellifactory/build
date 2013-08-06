@@ -35,6 +35,7 @@ module WebSharperReferences =
 
     let Compute env =
         let rb = ReferenceBuilder.Current.Find env
+        let wsHome = WebSharperConfig.WebSharperHome.Find env
         let paths =
             [
                 "IntelliFactory.Formlet.dll"
@@ -56,9 +57,19 @@ module WebSharperReferences =
                 "IntelliFactory.WebSharper.Testing.dll"
                 "IntelliFactory.WebSharper.Web.dll"
             ]
-            |> List.map (fun x -> "/tools/net45/" + x)
-        rb.NuGet("WebSharper").At(paths).Reference()
-        |> Seq.singleton 
+        match wsHome with
+        | None ->
+            let paths =
+                paths
+                |> List.map (fun x -> "/tools/net45/" + x)
+            rb.NuGet("WebSharper").At(paths).Reference()
+            |> Seq.singleton
+        | Some wh ->
+            paths
+            |> List.map (fun p ->
+                Path.Combine(wh, p)
+                |> rb.File)
+            |> Seq.ofList
 
 type WebSharperProjectConfig =
     {
