@@ -246,7 +246,8 @@ type NuGetResolver private (env) =
         pm.GetPackageDirectory(pkg)
         |> Option.bind (fun pkgDir ->
             let file = repo +/ pkgDir +/ p
-            if IsFile file then Some file else None)
+            let f = FileInfo file
+            if f.Exists then Some f.FullName else None)
         |> Option.map (fun p -> ResolvedRef p)
 
     let bestFit getTarget getSupported fw (xs: seq<'T>) : option<'T> =

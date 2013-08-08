@@ -188,6 +188,9 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             |> FSharpConfig.Kind.Custom FSharpConsoleExecutable
             |> buildFS rr
 
+    let getWsHome rr =
+        Path.GetDirectoryName (util.GetWebSharperToolPath rr)
+
     let build2 (rr: ResolvedReferences) =
         match cfg.Kind with
         | WebSharperLibrary | WebSharperHtmlWebsite -> ()
@@ -199,7 +202,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
                     .SearchDirectories([wsHome])
                     .SearchPaths(rr.Paths)
             aR.Wrap <| fun () ->
-                let wsHome = Path.GetDirectoryName (util.GetWebSharperToolPath rr)
+                let wsHome = getWsHome rr
                 util.Execute(outputPath1,
                     [
                         yield outputPath1
@@ -236,6 +239,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let build4 (rr: ResolvedReferences) =
         match cfg.Kind with
         | WebSharperHtmlWebsite ->
+            let wsHome = getWsHome rr
             try
                 util.ExecuteWebSharper(rr,
                     [
@@ -246,6 +250,8 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
                         FSharpConfig.BaseDir.Find fs
                         "-source"
                         BuildConfig.OutputDir.Find fs
+                        "-source"
+                        wsHome
                         "-out"
                         WebSharperConfig.WebSharperHtmlDirectory.Find fs
                         "-site"
