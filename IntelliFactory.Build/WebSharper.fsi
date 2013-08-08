@@ -38,6 +38,7 @@ type WebSharperHostWebsite =
 [<Sealed>]
 type WebSharperProjects =
     member Extension : name: string -> WebSharperProject
+    member HtmlWebsite : name: string -> WebSharperProject
     member HostWebsite : name: string -> WebSharperHostWebsite
     member Library : name: string -> WebSharperProject
     static member internal Current : Parameter<WebSharperProjects>

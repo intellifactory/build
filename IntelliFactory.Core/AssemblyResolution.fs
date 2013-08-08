@@ -34,21 +34,25 @@ module Implemetnation =
             a.GetName()
             |> isCompatible name)
 
-    let loadInto (dom: AppDomain) (path: string) =
-        File.ReadAllBytes path
-        |> dom.Load
+    let loadInto (baseDir: string) (dom: AppDomain) (path: string) =
+        let f = FileInfo path
+        if f.DirectoryName = baseDir then
+            dom.Load(AssemblyName.GetAssemblyName path)
+        else
+            File.ReadAllBytes path
+            |> dom.Load
 
     type AssemblyResolution =
         {
             ResolvePath : AssemblyName -> option<string>
         }
 
-        member r.ResolveAssembly(dom: AppDomain)(name: AssemblyName) =
+        member r.ResolveAssembly(bD: string, dom: AppDomain, name: AssemblyName) =
             match tryFindAssembly dom name with
             | None ->
                 match r.ResolvePath name with
                 | None -> None
-                | Some r -> Some (loadInto dom r)
+                | Some r -> Some (loadInto bD dom r)
             | r -> r
 
     let combine a b =
@@ -130,7 +134,7 @@ module Implemetnation =
 /// TODO: this probably belongs in Core.
 [<Sealed>]
 [<SecuritySafeCritical>]
-type AssemblyResolver(dom: AppDomain, reso: AssemblyResolution) =
+type AssemblyResolver(baseDir: string, dom: AppDomain, reso: AssemblyResolution) =
 
     let root = obj ()
     let reso = memoizeResolution root reso
@@ -139,7 +143,7 @@ type AssemblyResolver(dom: AppDomain, reso: AssemblyResolution) =
 
     let resolve (x: obj) (a: ResolveEventArgs) =
         let name = AssemblyName(a.Name)
-        match reso.ResolveAssembly dom name with
+        match reso.ResolveAssembly(baseDir, dom, name) with
         | None -> null
         | Some r -> r
 
@@ -158,11 +162,13 @@ type AssemblyResolver(dom: AppDomain, reso: AssemblyResolution) =
         finally
             r.Remove()
 
-    member r.SearchDirectories ds = AssemblyResolver(dom, reso ++ searchDirs ds)
-    member r.SearchPaths ps = AssemblyResolver(dom, reso ++ searchPaths ps)
-    member r.Resolve name = reso.ResolveAssembly dom name
+    member r.SearchDirectories ds = AssemblyResolver(baseDir, dom, reso ++ searchDirs ds)
+    member r.SearchPaths ps = AssemblyResolver(baseDir, dom, reso ++ searchPaths ps)
+    member r.Resolve name = reso.ResolveAssembly(baseDir, dom, name)
     member r.ResolvePath name = reso.ResolvePath name
     member r.Resolution = reso
+    member r.WithBaseDirectory bD = AssemblyResolver(Path.GetFullPath bD, dom, reso)
 
     static member Create(?domain) =
-        AssemblyResolver(defaultArg domain AppDomain.CurrentDomain, zero)
+        let dom = defaultArg domain AppDomain.CurrentDomain
+        AssemblyResolver(dom.BaseDirectory, dom, zero)

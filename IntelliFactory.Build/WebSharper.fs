@@ -21,6 +21,7 @@ open IntelliFactory.Core
 
 type WebSharperKind =
     | WebSharperExtension
+    | WebSharperHtmlWebsite
     | WebSharperLibrary
 
 module WebSharperConfig =
@@ -30,6 +31,10 @@ module WebSharperConfig =
             match Environment.GetEnvironmentVariable("WebSharperHome") with
             | null | "" -> None
             | env -> Some env)
+
+    let WebSharperHtmlDirectory : Parameter<string> =
+        Parameter.Define (fun env ->
+            Path.Combine(BuildConfig.BuildDir.Find env, "html"))
 
 module WebSharperReferences =
 
@@ -172,7 +177,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             Parameters.Get fs
             |> FSharpConfig.Sources.Update(Seq.append [ainfoPath])
         match cfg.Kind with
-        | WebSharperLibrary ->
+        | WebSharperLibrary | WebSharperHtmlWebsite ->
             env
             |> FSharpConfig.OutputPath.Custom outputPath2
             |> FSharpConfig.DocPath.Custom docPath
@@ -185,11 +190,16 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
 
     let build2 (rr: ResolvedReferences) =
         match cfg.Kind with
-        | WebSharperLibrary -> ()
+        | WebSharperLibrary | WebSharperHtmlWebsite -> ()
         | WebSharperExtension ->
             let wsHome = Path.GetDirectoryName (util.GetWebSharperToolPath rr)
-            let aR = AssemblyResolver.Create(dom).SearchDirectories([wsHome]).SearchPaths(rr.Paths)
+            let aR =
+                AssemblyResolver.Create(dom)
+                    .WithBaseDirectory(wsHome)
+                    .SearchDirectories([wsHome])
+                    .SearchPaths(rr.Paths)
             aR.Wrap <| fun () ->
+                let wsHome = Path.GetDirectoryName (util.GetWebSharperToolPath rr)
                 util.Execute(outputPath1,
                     [
                         yield outputPath1
@@ -223,6 +233,36 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
                 yield outputPath
             ])
 
+    let build4 (rr: ResolvedReferences) =
+        match cfg.Kind with
+        | WebSharperHtmlWebsite ->
+            try
+                util.ExecuteWebSharper(rr,
+                    [
+                        "sitelets"
+                        "-mode"
+                        "Release"
+                        "-project"
+                        FSharpConfig.BaseDir.Find fs
+                        "-source"
+                        BuildConfig.OutputDir.Find fs
+                        "-out"
+                        WebSharperConfig.WebSharperHtmlDirectory.Find fs
+                        "-site"
+                        FSharpConfig.OutputPath.Find fs
+                    ])
+            with e ->
+                let assemblies =
+                    dom.GetAssemblies()
+                    |> Seq.sortBy (fun a -> a.FullName)
+                    |> Seq.toArray
+                for a in assemblies do
+                    let loc = try string a.Location with _ -> "DYNAMIC"
+                    if a.FullName.StartsWith("System") |> not then
+                        stdout.WriteLine("    {0} at {1} [RO: {2}]", a, loc, a.ReflectionOnly)
+                stderr.WriteLine(e)
+        | _ -> ()
+
     let rm x =
         if IsFile x then
             File.Delete x
@@ -249,6 +289,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             build1 rr
             build2 rr
             build3 rr
+            build4 rr
             rd.Touch()
         else
             log.Info("Skipping {0}", project.Name)
@@ -290,14 +331,9 @@ type WebSharperHostWebsite(env: IParametric) =
         member h.Build() =
             let rr = References.Current.Find(env).ResolveReferences fw refs
             let refs = ResizeArray()
-            for p in rr.Paths do
-                match Path.GetFileName(p) with
-                | "mscorlib.dll"
-                | "System.dll"
-                | "System.Core.dll"
-                | "System.Numerics.dll"
-                | "System.Web.dll" -> ()
-                | _ ->
+            for r in rr.References do
+                if not r.IsFrameworkReference then
+                    let p = r.Path
                     let fc = FileSystem.Content.ReadBinaryFile p
                     fc.WriteFile(Path.Combine(binDir, Path.GetFileName p))
                     refs.Add p
@@ -333,19 +369,23 @@ type WebSharperProjects(env) =
         let fp = fps.Library(name).References(fun _ -> rs)
         WebSharperProject(cfg, fp)
 
+    let configWithWebReference name =
+        let rs = WebSharperReferences.Compute(env)
+        fps.Library(name).References(fun r ->
+            [
+                yield r.Assembly("System.Web")
+                yield! rs
+            ])
+        |> BuildConfig.ProjectName.Custom name
+
     member ps.Extension name =
         make name { Kind = WebSharperExtension }
 
+    member ps.HtmlWebsite name =
+        make name { Kind = WebSharperHtmlWebsite }
+
     member ps.HostWebsite name =
-        let rs = WebSharperReferences.Compute(env)
-        let cfg =
-            fps.Library(name).References(fun r ->
-                [
-                    yield r.Assembly("System.Web")
-                    yield! rs
-                ])
-            |> BuildConfig.ProjectName.Custom name
-        WebSharperHostWebsite(cfg)
+        WebSharperHostWebsite(configWithWebReference name)
 
     member ps.Library name =
         make name { Kind = WebSharperLibrary }
