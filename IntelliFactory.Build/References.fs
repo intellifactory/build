@@ -163,16 +163,22 @@ module ReferenceConfig =
             let fs23 = List.ofSeq (FSharp3Runtime20.Find env)
             let fs43 = List.ofSeq (FSharp3Runtime40.Find env)
             let old = [win +/ "Microsoft.NET" +/ "Framework" +/ "v2.0.50727"] @ fs23
+            let v4x = win +/ "Microsoft.NET" +/ "Framework" +/ "v4.0.30319"
+            let fsHome =
+                match Environment.GetEnvironmentVariable("FSharpHome") with
+                | null | "" -> []
+                | fsHome -> [fsHome]
             fwt.Cache <| fun fw ->
                 match fw with
-                | Is fwt.Net45 -> [ramfn +/ "v4.5"; ml +/ "4.5"] @ fs43
-                | Is fwt.Net40 -> [ramfn +/ "v4.0"; ml +/ "4.0"] @ fs43
+                | Is fwt.Net45 -> [ramfn +/ "v4.5"; ml +/ "4.5"; v4x] @ fs43
+                | Is fwt.Net40 -> [ramfn +/ "v4.0"; ml +/ "4.0"; v4x] @ fs43
                 | Is fwt.Net40CP -> [ramfn +/ "v4.0" +/ "Profile" +/ "Client"] @ fs43
                 | Is fwt.Net35CP -> [ramfn +/ "v3.5" +/ "Profile" +/ "Client"] @ fs23
                 | Is fwt.Net35 -> [ram +/ "Framework" +/ "v3.5"; ml +/ "3.5"] @ old
                 | Is fwt.Net30 -> [ram +/ "Framework" +/ "v3.0"] @ old
                 | Is fwt.Net20 -> [ml +/ "2.0"] @ old
                 | _ -> []
+                |> List.append fsHome
                 |> Seq.ofList)
 
 [<Sealed>]
