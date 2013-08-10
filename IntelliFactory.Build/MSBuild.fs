@@ -45,6 +45,14 @@ type MSBuildProject internal (env: IParametric, path: string, ?props: Map<string
         member p.Framework = fw
         member p.References = Seq.empty
 
+        member p.Parametric =
+            {
+                new IParametric<IProject> with
+                    member p.WithParameters env = MSBuildProject(env, path, props) :> _
+                interface IParametric with
+                    member p.Parameters = env.Parameters
+            }
+
     /// Sets any property.
     member p.Property(name, value) =
         MSBuildProject(env, path, Map.add name value props)

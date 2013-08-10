@@ -25,26 +25,26 @@ type Solution =
         projects : list<IProject>
     }
 
+    static member WithDomain(f: AppDomain -> 'T) =
+        let setup = AppDomainSetup()
+        setup.LoaderOptimization <- LoaderOptimization.MultiDomainHost
+        let dom = AppDomain.CreateDomain("Build", null, setup)
+        try
+            f dom
+        finally
+            AppDomain.Unload(dom)
+
     member s.Build() =
-//        let fwt = Frameworks.Current.Find s.env
-//        let rt = References.Current.Find s.env
-//        let refs =
-//            fwt.Cache(fun fw ->
-//                s.projects
-//                |> List.filter (fun p -> p.Framework = fw)
-//                |> Seq.collect (fun p -> p.References)
-//                |> rt.Resolve fw)
-//        let log = Log.Create<Solution> s.env
-        for p in s.projects do
-//            let rs =
-//                refs p.Framework
-//                |> rt.ResolveProjectReferences p.References
-//            log.Info("Building {0} for {1}", p.Name, p.Framework.Name)
-            p.Build()
+        Solution.WithDomain <| fun dom ->
+            for p in s.projects do
+                let q = BuildConfig.AppDomain.Custom dom p.Parametric
+                q.Build()
 
     member s.Clean() =
-        for p in s.projects do
-            p.Clean()
+        Solution.WithDomain <| fun dom ->
+            for p in s.projects do
+                let q = BuildConfig.AppDomain.Custom dom p.Parametric
+                q.Clean()
 
 [<Sealed>]
 type Solutions(env: Parameters) =

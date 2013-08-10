@@ -159,6 +159,14 @@ type NuGetPackageBuilder(settings, env) =
         member pr.Framework = fwt.Net45
         member pr.Name = settings.PackageConfig.Id
 
+        member p.Parametric =
+            {
+                new IParametric<IProject> with
+                    member p.WithParameters env = NuGetPackageBuilder(settings, env) :> _
+                interface IParametric with
+                    member p.Parameters = env
+            }
+
     static member Create(env) =
         let pid = PackageId.Current.Find env
         let cfg =
@@ -231,6 +239,14 @@ type NuGetSpecProject(env: IParametric, file: string) =
         member p.Framework = fw
         member p.Name = Path.GetFileName fullPath
         member p.References = Seq.empty
+
+        member p.Parametric =
+            {
+                new IParametric<IProject> with
+                    member p.WithParameters env = NuGetSpecProject(env, file) :> _
+                interface IParametric with
+                    member p.Parameters = env.Parameters
+            }
 
 [<Sealed>]
 type NuGetPackageTool private (env: Parameters) =

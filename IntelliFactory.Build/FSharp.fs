@@ -349,6 +349,15 @@ type FSharpProject(env: Parameters) =
         member p.Clean() = b.Value.Clean()
         member p.Framework = b.Value.Framework
         member p.Name = b.Value.Name
+
+        member p.Parametric =
+            {
+                new IParametric<IProject> with
+                    member fp.WithParameters env = FSharpProject(env) :> _
+                interface IParametric with
+                    member fp.Parameters = env
+            }
+
         member p.References = b.Value.References
 
     interface IReferenceProject with

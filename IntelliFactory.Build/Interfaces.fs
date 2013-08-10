@@ -88,6 +88,9 @@ type IProject =
     /// Informational project name.
     abstract Name : string
 
+    /// Customizable parameters.
+    abstract Parametric : IParametric<IProject>
+
     /// The references required to build the project.
     abstract References : seq<Reference>
 

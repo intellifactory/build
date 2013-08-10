@@ -240,33 +240,22 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         match cfg.Kind with
         | WebSharperHtmlWebsite ->
             let wsHome = getWsHome rr
-            try
-                util.ExecuteWebSharper(rr,
-                    [
-                        "sitelets"
-                        "-mode"
-                        "Release"
-                        "-project"
-                        FSharpConfig.BaseDir.Find fs
-                        "-source"
-                        BuildConfig.OutputDir.Find fs
-                        "-source"
-                        wsHome
-                        "-out"
-                        WebSharperConfig.WebSharperHtmlDirectory.Find fs
-                        "-site"
-                        FSharpConfig.OutputPath.Find fs
-                    ])
-            with e ->
-                let assemblies =
-                    dom.GetAssemblies()
-                    |> Seq.sortBy (fun a -> a.FullName)
-                    |> Seq.toArray
-                for a in assemblies do
-                    let loc = try string a.Location with _ -> "DYNAMIC"
-                    if a.FullName.StartsWith("System") |> not then
-                        stdout.WriteLine("    {0} at {1} [RO: {2}]", a, loc, a.ReflectionOnly)
-                stderr.WriteLine(e)
+            util.ExecuteWebSharper(rr,
+                [
+                    "sitelets"
+                    "-mode"
+                    "Release"
+                    "-project"
+                    FSharpConfig.BaseDir.Find fs
+                    "-source"
+                    BuildConfig.OutputDir.Find fs
+                    "-source"
+                    wsHome
+                    "-out"
+                    WebSharperConfig.WebSharperHtmlDirectory.Find fs
+                    "-site"
+                    FSharpConfig.OutputPath.Find fs
+                ])
         | _ -> ()
 
     let rm x =
@@ -315,6 +304,14 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         member p.Name = project.Name
         member p.References = project.References
 
+        member p.Parametric =
+            {
+                new IParametric<IProject> with
+                    member fp.WithParameters env = WebSharperProject(cfg, Parameters.Set env fs) :> _
+                interface IParametric with
+                    member fp.Parameters = Parameters.Get fs
+            }
+
     interface IParametric with
         member x.Parameters = Parameters.Get fs
 
@@ -358,6 +355,14 @@ type WebSharperHostWebsite(env: IParametric) =
         member h.Framework = fw
         member h.Name = name
         member h.References = refs
+
+        member h.Parametric =
+            {
+                new IParametric<IProject> with
+                    member fp.WithParameters env = WebSharperHostWebsite(env) :> _
+                interface IParametric with
+                    member fp.Parameters = env.Parameters
+            }
 
     interface IParametric with
         member hw.Parameters = env.Parameters
