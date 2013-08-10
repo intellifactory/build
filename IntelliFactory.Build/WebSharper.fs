@@ -197,7 +197,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         | WebSharperExtension ->
             let wsHome = Path.GetDirectoryName (util.GetWebSharperToolPath rr)
             let aR =
-                AssemblyResolver.Create(dom)
+                AssemblyResolver.Create()
                     .WithBaseDirectory(wsHome)
                     .SearchDirectories([wsHome])
                     .SearchPaths(rr.Paths)
