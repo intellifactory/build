@@ -198,18 +198,32 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         | WebSharperLibrary | WebSharperHtmlWebsite -> ()
         | WebSharperExtension ->
             let wsHome = Path.GetDirectoryName (util.GetWebSharperToolPath rr)
-            let aR =
-                AssemblyResolver.Create()
-                    .WithBaseDirectory(wsHome)
+            let withRefs (r: AssemblyResolver) =
+                r.WithBaseDirectory(wsHome)
                     .SearchDirectories([wsHome])
                     .SearchPaths(rr.Paths)
-            do
-                let fn = "IntelliFactory.WebSharper.InterfaceGenerator.dll"
-                let src = Path.Combine(wsHome, fn)
-                let tgt = Path.Combine(Path.GetDirectoryName outputPath1, fn)
-                if File.Exists src then
-                    File.Copy(src, tgt, overwrite = true)
-            aR.Wrap <| fun () ->
+            let aR1 = withRefs (AssemblyResolver.Create())
+//            let _ = util.Domain.Load(File.ReadAllBytes typeof<AssemblyResolver>.Assembly.Location)
+//            let aR2 = withRefs (AssemblyResolver.Create(util.Domain))
+//            let aR =
+//                AssemblyResolver.Create()
+//                    .WithBaseDirectory(wsHome)
+//                    .SearchDirectories([wsHome])
+//                    .SearchPaths(rr.Paths)
+//            do
+//                let fileNames =
+//                    [
+//                        "IntelliFactory.WebSharper.Core.dll"
+//                        "IntelliFactory.WebSharper.Dom.dll"
+//                        "IntelliFactory.WebSharper.InterfaceGenerator.dll"
+//                    ]
+//                for fn in fileNames do
+//                    let src = Path.Combine(wsHome, fn)
+//                    let tgt = Path.Combine(Path.GetDirectoryName outputPath1, fn)
+//                    if File.Exists src then
+//                        File.Copy(src, tgt, overwrite = true)
+//            aR2.Install()
+            aR1.Wrap <| fun () ->
                 let wsHome = getWsHome rr
                 util.Execute(outputPath1,
                     [
