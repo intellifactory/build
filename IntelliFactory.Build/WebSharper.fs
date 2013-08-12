@@ -99,6 +99,8 @@ type WebSharperUtility(env: IParametric, log: Log) =
             | Some t -> t
         | Some x -> Path.Combine(x, "WebSharper.exe")
 
+    member u.Domain = dom
+
     member u.Execute(exe: string, args: seq<string>) =
         let msg =
             seq {
@@ -201,6 +203,12 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
                     .WithBaseDirectory(wsHome)
                     .SearchDirectories([wsHome])
                     .SearchPaths(rr.Paths)
+            do
+                let fn = "IntelliFactory.WebSharper.InterfaceGenerator.dll"
+                let src = Path.Combine(wsHome, fn)
+                let tgt = Path.Combine(Path.GetDirectoryName outputPath1, fn)
+                if File.Exists src then
+                    File.Copy(src, tgt, overwrite = true)
             aR.Wrap <| fun () ->
                 let wsHome = getWsHome rr
                 util.Execute(outputPath1,
