@@ -24,5 +24,6 @@ type internal CacheKey =
 type internal Cache =
     new : unit -> Cache
     member Lookup<'T1,'T2 when 'T1 : equality> : CacheKey -> (unit -> 'T2) -> 'T1 -> 'T2
+    member TryLookup<'T1,'T2 when 'T1 : equality> : CacheKey -> (unit -> option<'T2>) -> 'T1 -> option<'T2>
     static member Init : IParametric<'R> -> 'R
     static member Current : Parameter<Cache>

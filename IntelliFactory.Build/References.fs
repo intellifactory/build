@@ -356,7 +356,7 @@ type NuGetResolver private (env) =
 
     let findExact (pid: string) (ver: SafeNuGetSemanticVersion) =
         (pid + ":" + string ver)
-        |> cache.Lookup findExactKey (fun () ->
+        |> cache.TryLookup findExactKey (fun () ->
             pm.LocalRepository.FindExact(pid, ver,
                 allowPreRelease = ver.SpecialVersion.IsSome,
                 allowUnlisted = true))

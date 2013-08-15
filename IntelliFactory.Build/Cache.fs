@@ -47,6 +47,19 @@ type Cache() =
                 dict.Add(k, res)
                 res
 
+    member c.TryLookup<'T1,'T2 when 'T1 : equality> (key: CacheKey) (f: unit -> option<'T2>) (input: 'T1) : option<'T2> =
+        lock root <| fun () ->
+            let k = { CacheKey = key; Input = input }
+            match dict.TryGetValue(k) with
+            | true, (:? 'T2 as res) -> Some res
+            | _ ->
+                let res = f ()
+                match res with
+                | None -> None
+                | Some r ->
+                    dict.Add(k, r)
+                    res
+
     static member Init(ps: IParametric<'R>) : 'R =
         ps
         |> current.Custom (Cache ())
