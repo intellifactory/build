@@ -18,6 +18,9 @@ open IntelliFactory.Core
 
 module WebSharperConfig =
 
+    /// Version of WebSharper to use for resolution.
+    val WebSharperVersion : Parameter<option<string>>
+
     /// Path to the directory containing WebSharper tools.
     val WebSharperHome : Parameter<option<string>>
 

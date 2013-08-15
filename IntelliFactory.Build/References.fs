@@ -352,6 +352,14 @@ type NuGetResolver private (env) =
         packages
 
     static let latestKey = CacheKey()
+    static let findExactKey = CacheKey()
+
+    let findExact (pid: string) (ver: SafeNuGetSemanticVersion) =
+        (pid + ":" + string ver)
+        |> cache.Lookup findExactKey (fun () ->
+            pm.LocalRepository.FindExact(pid, ver,
+                allowPreRelease = ver.SpecialVersion.IsSome,
+                allowUnlisted = true))
 
     let installPkgSet (rs: seq<INuGetReference>) =
         let findLatestPackageById (pid: string) =
@@ -370,10 +378,6 @@ type NuGetResolver private (env) =
                         |> Seq.maxBy (fun pkg -> pkg.Version.Version)
                     log.Verbose("Latest package: {0} --> {1}", pkg.Id, pkg.Version)
                     Some pkg)
-        let findExact pid ver =
-            pm.LocalRepository.FindExact(pid, ver,
-                allowPreRelease = ver.SpecialVersion.IsSome,
-                allowUnlisted = true)
         let install pid ver =
             pm.InstallExact(pid, ver)
             findExact pid ver

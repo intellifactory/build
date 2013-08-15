@@ -26,6 +26,9 @@ type WebSharperKind =
 
 module WebSharperConfig =
 
+    let WebSharperVersion : Parameter<option<string>> =
+        Parameter.Create None
+
     let WebSharperHome : Parameter<option<string>> =
         Parameter.Define (fun env ->
             match Environment.GetEnvironmentVariable("WebSharperHome") with
@@ -67,7 +70,9 @@ module WebSharperReferences =
             let paths =
                 paths
                 |> List.map (fun x -> "/tools/net45/" + x)
-            rb.NuGet("WebSharper").At(paths).Reference()
+            match WebSharperConfig.WebSharperVersion.Find env with
+            | None -> rb.NuGet("WebSharper").At(paths).Reference()
+            | Some v -> rb.NuGet("WebSharper").Version(v).At(paths).Reference()
             |> Seq.singleton
         | Some wh ->
             paths
