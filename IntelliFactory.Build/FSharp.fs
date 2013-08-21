@@ -220,6 +220,11 @@ module FSharpXml =
             | _ -> Some p
         else None
 
+    let getFSharpXmlFile (env: IParametric) =
+        let name = BuildConfig.ProjectName.Find env
+        let outDir = BuildConfig.OutputDir.Find env
+        Path.Combine(outDir, name + ".fs.xml")
+
     let generateFSharpXmlFile baseDir (rr: ResolvedReferences) sourcePaths output =
         let x = XmlGenerator.Create()
         let xml =
@@ -233,6 +238,17 @@ module FSharpXml =
                     yield x.Element "Reference" + ["File", rr]
             ]
         xml.WriteFile output
+
+    let writeReferenceFile (env: IParametric) (rr: ResolvedReferences) =
+        let sourcePaths = FSharpConfig.Sources.Find env
+        match Seq.toList sourcePaths with
+        | [] -> ()
+        | sources ->
+            let output = getFSharpXmlFile env
+            let fw = BuildConfig.CurrentFramework.Find env
+            let baseDir = BuildConfig.RootDir.Find env
+            let output = FSharpConfig.OutputPath.Find env
+            generateFSharpXmlFile (DirectoryInfo baseDir) rr sources output
 
 [<Sealed>]
 type FSharpProjectBuilder(env: Parameters, log: Log) =
@@ -250,7 +266,6 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
     let fsharpHome = FSharpConfig.FSharpHome.Find env
     let argsPath = Path.Combine(outDir, name + ".args.txt")
     let ainfoPath = Path.Combine(outDir, name + ".annotations.fs")
-    let fsXmlPath = Path.Combine(outDir, name + ".fs.xml")
     let fw = BuildConfig.CurrentFramework.Find env
     let refs = FSharpConfig.References.Find env
     let rootDir = BuildConfig.RootDir.Find env
@@ -308,6 +323,11 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
                     if target.Exists |> not || target.LastWriteTimeUtc < source.LastWriteTimeUtc then
                         Content.ReadBinaryFile(source.FullName).WriteFile(target.FullName)
         | _ -> ()
+        p.PrepareReferences()
+
+    member p.PrepareReferences() =
+        let rr = resolved.Value
+        let fsXmlPath = FSharpXml.getFSharpXmlFile env
         FSharpXml.generateFSharpXmlFile (DirectoryInfo rootDir) rr sources fsXmlPath
 
     member p.Clean() =
@@ -319,6 +339,7 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
             yield! Option.toList docPath
             yield ainfoPath
             yield argsPath
+            yield FSharpXml.getFSharpXmlFile env
         ]
         |> List.iter rm
         pW.Clean()
@@ -377,6 +398,7 @@ type FSharpProject(env: Parameters) =
     interface IProject with
         member p.Build() = b.Value.Build()
         member p.Clean() = b.Value.Clean()
+        member p.PrepareReferences() = b.Value.PrepareReferences()
         member p.Framework = b.Value.Framework
         member p.Name = b.Value.Name
 

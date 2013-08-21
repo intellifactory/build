@@ -25,6 +25,7 @@ module MSBuild = IntelliFactory.Build.MSBuild
 type BuildTool(?env) =
 
     static let shouldClean = Parameter.Create false
+    static let shouldPrepare = Parameter.Create false
 
     static let getDefaultEnv () =
         let logConfig = Logs.Default.Info().ToConsole()
@@ -67,12 +68,15 @@ type BuildTool(?env) =
         for a in args do
             match a with
             | "--clean" -> bt <- shouldClean.Custom true bt
+            | "--references"-> bt <- shouldPrepare.Custom true bt
             | S "-v:" v -> bt <- PackageVersion.Full.Custom (Version.Parse v) bt
             | _ -> ()
         bt
 
     member bt.Dispatch(sln: Solution) =
-        if shouldClean.Find env then
+        if shouldPrepare.Find env then
+            sln.PrepareReferences()
+        elif shouldClean.Find env then
             sln.Clean()
         else
             sln.Build()

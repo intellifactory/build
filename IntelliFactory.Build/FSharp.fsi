@@ -69,6 +69,9 @@ type internal FSharpProjectWriter =
     new : IParametric -> FSharpProjectWriter
     member Write : ResolvedReferences -> unit
 
+module internal FSharpXml =
+    val writeReferenceFile : IParametric -> ResolvedReferences -> unit
+
 /// Represents an F# project building a single assembly.
 [<Sealed>]
 type FSharpProject =

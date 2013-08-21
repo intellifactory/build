@@ -20,6 +20,7 @@ open IntelliFactory.Core
 type Solution =
     member Build : unit -> unit
     member Clean : unit -> unit
+    member PrepareReferences : unit -> unit
 
 [<Sealed>]
 type Solutions =

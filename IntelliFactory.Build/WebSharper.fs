@@ -178,8 +178,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         FileSystem.TextContent(args).WriteFile(argsPath)
         t.Build()
 
-    let build1 rr =
-        aig.Generate(AssemblyInfoSyntax.FSharp, aid, ainfoPath)
+    let getFSParams () =
         let env =
             Parameters.Get fs
             |> FSharpConfig.Sources.Update(Seq.append [ainfoPath])
@@ -188,12 +187,23 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             env
             |> FSharpConfig.OutputPath.Custom outputPath2
             |> FSharpConfig.DocPath.Custom docPath
-            |> buildFS rr
         | WebSharperExtension ->
             env
             |> FSharpConfig.OutputPath.Custom outputPath1
             |> FSharpConfig.Kind.Custom FSharpConsoleExecutable
-            |> buildFS rr
+
+    let resolveRefs () =
+        References.Current.Find(fs).ResolveReferences fw project.References
+
+    let prepareRefs () =
+        let ps = getFSParams ()
+        let rr = resolveRefs ()
+        FSharpXml.writeReferenceFile ps rr
+
+    let build1 rr =
+        aig.Generate(AssemblyInfoSyntax.FSharp, aid, ainfoPath)
+        getFSParams ()
+        |> buildFS rr
 
     let getWsHome rr =
         Path.GetDirectoryName (util.GetWebSharperToolPath rr)
@@ -298,7 +308,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         rm outputPath
 
     let build () =
-        let rr = References.Current.Find(fs).ResolveReferences fw project.References
+        let rr = resolveRefs ()
         let rd =
             RebuildProblem.Create(fs)
                 .AddInputPaths(inputFiles rr)
@@ -328,6 +338,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         member p.Build() = build ()
         member p.Clean() = clean ()
         member p.Framework = project.Framework
+        member p.PrepareReferences() = prepareRefs ()
         member p.Name = project.Name
         member p.References = project.References
 
@@ -357,6 +368,10 @@ type WebSharperHostWebsite(env: IParametric) =
     let scriptsFolder = Path.Combine(baseDir, "Scripts")
 
     interface IProject with
+
+        member h.PrepareReferences() =
+            let rr = References.Current.Find(env).ResolveReferences fw refs
+            FSharpXml.writeReferenceFile env rr
 
         member h.Build() =
             let rr = References.Current.Find(env).ResolveReferences fw refs

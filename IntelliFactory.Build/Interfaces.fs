@@ -79,6 +79,9 @@ type IProject =
     /// Builds the project.
     abstract Build : unit -> unit
 
+    /// Prepares references for the project.
+    abstract PrepareReferences : unit -> unit
+
     /// Cleans the project.
     abstract Clean : unit -> unit
 

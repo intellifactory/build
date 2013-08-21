@@ -39,6 +39,7 @@ type MSBuildProject internal (env: IParametric, path: string, ?props: Map<string
             failwith "MSBuild failed"
 
     interface IProject with
+        member p.PrepareReferences() = ()
         member p.Build() = build "Build"
         member p.Clean() = build "Clean"
         member p.Name = Path.GetFileName fullPath

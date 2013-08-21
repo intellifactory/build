@@ -46,6 +46,10 @@ type Solution =
                 // let q = BuildConfig.AppDomain.Custom dom p.Parametric
                 p.Clean()
 
+    member s.PrepareReferences() =
+        for p in s.projects do
+            p.PrepareReferences()
+
 [<Sealed>]
 type Solutions(env: Parameters) =
     static let current = Parameter.Define(fun env -> Solutions env)

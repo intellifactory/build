@@ -153,6 +153,7 @@ type NuGetPackageBuilder(settings, env) =
         upd { cfg with ProjectUrl = Some url }
 
     interface IProject with
+        member pr.PrepareReferences() = ()
         member pr.Build() = pr.Build()
         member pr.Clean() = pr.Clean()
         member pr.References = Seq.empty
@@ -218,6 +219,9 @@ type NuGetSpecProject(env: IParametric, file: string) =
         Path.Combine(out, String.Format("{0}.{1}.nupkg", builder.Id, getVN ()))
 
     interface IProject with
+
+        member p.PrepareReferences() =
+            ()
 
         member p.Build() =
             let builder = getPB ()
