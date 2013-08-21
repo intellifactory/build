@@ -84,6 +84,9 @@ module FSharpConfig =
     let EmbeddedResources : Parameter<seq<string>> =
         Parameter.Create Seq.empty
 
+    let SourcesProject : Parameter<option<FileInfo>> =
+        Parameter.Create None
+
 [<Sealed>]
 type FSharpProjectParser(env: IParametric) =
 
@@ -281,6 +284,11 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
         FileInfo argsPath
         :: FileInfo ainfoPath
         :: [for s in sources -> FileInfo(Path.Combine(baseDir, s))]
+        |> List.append [
+                match FSharpConfig.SourcesProject.Find env with
+                | Some file -> yield file
+                | None -> ()
+            ]
         |> List.append [for r in rr.Paths -> FileInfo(Path.Combine(rootDir, r))]
 
     let outputFiles =
@@ -451,9 +459,14 @@ module FSharpProjectExtensinos =
             let baseDir = FSharpConfig.BaseDir.Find p
             let msbp = defaultArg msbuildProject (name + ".fsproj")
             let msb = Path.GetFullPath(Path.Combine(baseDir, msbp))
+            let projFile = FileInfo msb
+            let env = p.Parameters
             let pP = FSharpProjectParser(p)
-            pP.Parse(msb, baseDir)
-            |> p.Sources
+            let ss = pP.Parse(msb, baseDir)
+            let env =
+                appendParameters FSharpConfig.Sources ss env
+                |> FSharpConfig.SourcesProject.Custom (Some projFile)
+            p.WithParameters env
 
 [<Sealed>]
 type FSharpInteractive(env) =
