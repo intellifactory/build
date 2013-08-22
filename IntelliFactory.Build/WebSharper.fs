@@ -155,7 +155,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
 
     let docPath = FSharpConfig.DocPath.Find fs
     let outputPath = FSharpConfig.OutputPath.Find fs
-    let outputPath1 = Path.ChangeExtension(outputPath, ".Generator.exe")
+    let outputPath1 = Path.ChangeExtension(outputPath, ".Generator.dll")
     let outputPath2 = Path.Combine(Path.GetDirectoryName outputPath, "raw", Path.GetFileName outputPath)
     let ainfoPath = Path.ChangeExtension(outputPath, ".annotations.fs")
     let argsPath = Path.ChangeExtension(outputPath, ".args.txt")
@@ -190,7 +190,6 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         | WebSharperExtension ->
             env
             |> FSharpConfig.OutputPath.Custom outputPath1
-            |> FSharpConfig.Kind.Custom FSharpConsoleExecutable
 
     let resolveRefs () =
         References.Current.Find(fs).ResolveReferences fw project.References
@@ -212,51 +211,24 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         match cfg.Kind with
         | WebSharperLibrary | WebSharperHtmlWebsite -> ()
         | WebSharperExtension ->
-            let wsHome = Path.GetDirectoryName (util.GetWebSharperToolPath rr)
-            let withRefs (r: AssemblyResolver) =
-                r.WithBaseDirectory(wsHome)
-                    .SearchDirectories([wsHome])
-                    .SearchPaths(rr.Paths)
-            let aR1 = withRefs (AssemblyResolver.Create())
-//            let _ = util.Domain.Load(File.ReadAllBytes typeof<AssemblyResolver>.Assembly.Location)
-//            let aR2 = withRefs (AssemblyResolver.Create(util.Domain))
-//            let aR =
-//                AssemblyResolver.Create()
-//                    .WithBaseDirectory(wsHome)
-//                    .SearchDirectories([wsHome])
-//                    .SearchPaths(rr.Paths)
-//            do
-//                let fileNames =
-//                    [
-//                        "IntelliFactory.WebSharper.Core.dll"
-//                        "IntelliFactory.WebSharper.Dom.dll"
-//                        "IntelliFactory.WebSharper.InterfaceGenerator.dll"
-//                    ]
-//                for fn in fileNames do
-//                    let src = Path.Combine(wsHome, fn)
-//                    let tgt = Path.Combine(Path.GetDirectoryName outputPath1, fn)
-//                    if File.Exists src then
-//                        File.Copy(src, tgt, overwrite = true)
-//            aR2.Install()
-            aR1.Wrap <| fun () ->
-                let wsHome = getWsHome rr
-                util.Execute(outputPath1,
-                    [
-                        yield outputPath1
-                        yield "-n:" + name
-                        yield "-o:" + outputPath2
-                        yield "-v:" + string (Version (ver.Major, ver.Minor, 0, 0))
-                        match docPath with
-                        | None -> ()
-                        | Some doc -> yield "-doc:" + doc
-                        match snk with
-                        | None -> ()
-                        | Some snk -> yield "-snk:" + snk
-                        for r in rr.Paths do
-                            yield "-r:" + r
-                        for res in FSharpConfig.EmbeddedResources.Find fs do
-                            yield "-embed:" + Path.GetFullPath(Path.Combine(baseDir, res))
-                    ])
+            util.ExecuteWebSharper(rr,
+                [
+                    yield "ig"
+                    yield outputPath1
+                    yield "-n:" + name
+                    yield "-o:" + outputPath2
+                    yield "-v:" + string (Version (ver.Major, ver.Minor, 0, 0))
+                    match docPath with
+                    | None -> ()
+                    | Some doc -> yield "-doc:" + doc
+                    match snk with
+                    | None -> ()
+                    | Some snk -> yield "-snk:" + snk
+                    for r in rr.Paths do
+                        yield "-r:" + r
+                    for res in FSharpConfig.EmbeddedResources.Find fs do
+                        yield "-embed:" + Path.GetFullPath(Path.Combine(baseDir, res))
+                ])
 
     let build3 (rr: ResolvedReferences) =
         util.ExecuteWebSharper(rr,

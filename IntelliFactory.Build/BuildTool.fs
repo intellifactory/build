@@ -86,6 +86,10 @@ type BuildTool(?env) =
     member bt.Framework = fw
     member bt.FSharp = fsharp
 
+    member bt.Verbose() =
+        bt
+        |> Logs.Config.Custom (Logs.Default.Verbose().ToConsole())
+
     /// Short-hand to set `PackageId.Current` and `PackageVersion.Current`.
     member bt.PackageId(pid, ?ver) =
         let bt = PackageId.Current.Custom pid bt

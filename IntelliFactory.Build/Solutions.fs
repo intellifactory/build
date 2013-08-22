@@ -25,26 +25,26 @@ type Solution =
         projects : list<IProject>
     }
 
-//    static member WithDomain(f: AppDomain -> 'T) =
-//        let setup = AppDomainSetup()
-//        setup.LoaderOptimization <- LoaderOptimization.MultiDomainHost
-//        let dom = AppDomain.CreateDomain("Build", null, setup)
-//        try
-//            f dom
-//        finally
-//            AppDomain.Unload(dom)
+    member s.WithDomain(f: AppDomain -> 'T) =
+        let setup = AppDomainSetup()
+        setup.LoaderOptimization <- LoaderOptimization.MultiDomainHost
+        let dom = AppDomain.CreateDomain("Build", null, setup)
+        try
+            f dom
+        finally
+            AppDomain.Unload(dom)
 
     member s.Build() =
-        // Solution.WithDomain <| fun dom ->
+        s.WithDomain <| fun dom ->
             for p in s.projects do
-                // let q = BuildConfig.AppDomain.Custom dom p.Parametric
-                p.Build()
+                let q = BuildConfig.AppDomain.Custom dom p.Parametric
+                q.Build()
 
     member s.Clean() =
-        // Solution.WithDomain <| fun dom ->
+        s.WithDomain <| fun dom ->
             for p in s.projects do
-                // let q = BuildConfig.AppDomain.Custom dom p.Parametric
-                p.Clean()
+                let q = BuildConfig.AppDomain.Custom dom p.Parametric
+                q.Clean()
 
     member s.PrepareReferences() =
         for p in s.projects do
