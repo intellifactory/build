@@ -20,6 +20,7 @@ open IntelliFactory.Core
 module BuildConfig =
     val AppDomain : Parameter<AppDomain>
     val BuildNumber : Parameter<option<int>>
+    val CommandLineArgs : Parameter<seq<string>>
     val CurrentFramework : Parameter<Framework>
     val KeyFile : Parameter<option<string>>
     val BuildDir : Parameter<string>

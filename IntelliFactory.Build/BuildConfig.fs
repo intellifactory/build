@@ -21,6 +21,12 @@ open IntelliFactory.Core
 
 module BuildConfig =
 
+    let CommandLineArgs =
+        Parameter.Define(fun env ->
+            match AppDomain.CurrentDomain.GetData("ARGS") with
+            | :? array<string> as args -> Seq.ofArray args
+            | _ -> Environment.GetCommandLineArgs() :> seq<_>)
+
     let CurrentFramework =
         Parameter.Define(fun env -> Frameworks.Current.Find(env).Net45)
 

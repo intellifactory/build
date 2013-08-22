@@ -52,15 +52,9 @@ open NuGet
 open IntelliFactory.Build
 open IntelliFactory.Core
 
-let common =
-    BuildTool().WithCommandLineArgs()
-    |> Logs.Config.Custom (Logs.Default.Verbose().ToConsole())
-
-let core =
-    common.PackageId("IntelliFactory.Core", "0.2")
-
-let build =
-    common.PackageId("IntelliFactory.Build", "0.2")
+let common = BuildTool().Verbose()
+let core = common.PackageId("IntelliFactory.Core", "0.2")
+let build = common.PackageId("IntelliFactory.Build", "0.2")
 
 let coreLib =
     core.FSharp.Library("IntelliFactory.Core")

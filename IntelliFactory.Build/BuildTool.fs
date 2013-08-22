@@ -24,9 +24,6 @@ module MSBuild = IntelliFactory.Build.MSBuild
 [<Sealed>]
 type BuildTool(?env) =
 
-    static let shouldClean = Parameter.Create false
-    static let shouldPrepare = Parameter.Create false
-
     static let getDefaultEnv () =
         let logConfig = Logs.Default.Info().ToConsole()
         Parameters.Default()
@@ -37,6 +34,32 @@ type BuildTool(?env) =
         match env with
         | None -> getDefaultEnv ()
         | Some env -> env
+
+    let args =
+        BuildConfig.CommandLineArgs.Find env
+
+    let (|S|_|) (p: string) (x: string) =
+        if x.StartsWith(p)
+            then Some (x.Substring(p.Length))
+            else None
+
+    let shouldClean () =
+        args
+        |> Seq.exists ((=) "--clean")
+
+    let shouldPrepare () =
+        args
+        |> Seq.exists ((=) "--references")
+
+    let env =
+        let customVersion =
+            args
+            |> Seq.tryPick (function
+                | S "-v:" v -> Some (Version.Parse v)
+                | _ -> None)
+        match customVersion with
+        | None -> env
+        | Some vn -> PackageVersion.Full.Custom vn env
 
     let fsharp = FSharpTool.Current.Find env
     let websharper = WebSharperProjects.Current.Find env
@@ -55,28 +78,10 @@ type BuildTool(?env) =
     interface IParametric<BuildTool> with
         member t.WithParameters ps = BuildTool(ps)
 
-    member bt.WithCommandLineArgs(?args: seq<string>) =
-        let args =
-            match args with
-            | None -> Environment.GetCommandLineArgs() :> seq<_>
-            | Some args -> args
-        let (|S|_|) (p: string) (x: string) =
-            if x.StartsWith(p)
-                then Some (x.Substring(p.Length))
-                else None
-        let mutable bt = bt
-        for a in args do
-            match a with
-            | "--clean" -> bt <- shouldClean.Custom true bt
-            | "--references"-> bt <- shouldPrepare.Custom true bt
-            | S "-v:" v -> bt <- PackageVersion.Full.Custom (Version.Parse v) bt
-            | _ -> ()
-        bt
-
     member bt.Dispatch(sln: Solution) =
-        if shouldPrepare.Find env then
+        if shouldPrepare () then
             sln.PrepareReferences()
-        elif shouldClean.Find env then
+        elif shouldClean () then
             sln.Clean()
         else
             sln.Build()
