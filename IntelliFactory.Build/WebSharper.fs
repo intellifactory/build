@@ -279,19 +279,18 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             let wsHome = getWsHome rr
             util.ExecuteWebSharper(rr,
                 [
-                    "sitelets"
-                    "-mode"
-                    "Release"
-                    "-project"
-                    FSharpConfig.BaseDir.Find fs
-                    "-source"
-                    BuildConfig.OutputDir.Find fs
-                    "-source"
-                    wsHome
-                    "-out"
-                    WebSharperConfig.WebSharperHtmlDirectory.Find fs
-                    "-site"
-                    FSharpConfig.OutputPath.Find fs
+                    yield "sitelets"
+                    yield "-mode"
+                    yield "Release"
+                    yield "-project"
+                    yield FSharpConfig.BaseDir.Find fs
+                    for r in rr.Paths do
+                        yield "-ref"
+                        yield r
+                    yield "-out"
+                    yield WebSharperConfig.WebSharperHtmlDirectory.Find fs
+                    yield "-site"
+                    yield FSharpConfig.OutputPath.Find fs
                 ])
         | _ -> ()
 
