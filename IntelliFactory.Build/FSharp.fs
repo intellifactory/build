@@ -211,11 +211,13 @@ type FSharpCompilerTask(env: Parameters, log: Log, rr: ResolvedReferences) =
 
 module FSharpXml =
 
-    let fixupPath (dir: DirectoryInfo) (path: string) =
-        let p = Path.Combine(dir.FullName, path)
-        if p.StartsWith dir.FullName then
+    let fixupPath (env: IParametric) (path: string) =
+        let baseDir = DirectoryInfo(FSharpConfig.BaseDir.Find env)
+        let rootDir = DirectoryInfo(BuildConfig.RootDir.Find env)
+        let p = Path.Combine(baseDir.FullName, path)
+        if p.StartsWith rootDir.FullName then
             let p =
-                p.Substring(dir.FullName.Length)
+                p.Substring(rootDir.FullName.Length)
                     .Replace(@"\", "/")
                     .TrimStart('/')
             match p with
@@ -228,12 +230,12 @@ module FSharpXml =
         let outDir = BuildConfig.OutputDir.Find env
         Path.Combine(outDir, name + ".fs.xml")
 
-    let generateFSharpXmlFile baseDir (rr: ResolvedReferences) sourcePaths output =
+    let generateFSharpXmlFile env (rr: ResolvedReferences) sourcePaths output =
         let x = XmlGenerator.Create()
         let xml =
             x.Element "Project" -< [
                 for s in sourcePaths do
-                    match fixupPath baseDir s with
+                    match fixupPath env s with
                     | None -> ()
                     | Some s ->
                         yield x.Element "Source" + ["File", s]
@@ -249,8 +251,7 @@ module FSharpXml =
         | sources ->
             let output = getFSharpXmlFile env
             let fw = BuildConfig.CurrentFramework.Find env
-            let baseDir = BuildConfig.RootDir.Find env
-            generateFSharpXmlFile (DirectoryInfo baseDir) rr sources output
+            generateFSharpXmlFile env rr sources output
 
 [<Sealed>]
 type FSharpProjectBuilder(env: Parameters, log: Log) =
@@ -335,7 +336,7 @@ type FSharpProjectBuilder(env: Parameters, log: Log) =
     member p.PrepareReferences() =
         let rr = resolved.Value
         let fsXmlPath = FSharpXml.getFSharpXmlFile env
-        FSharpXml.generateFSharpXmlFile (DirectoryInfo rootDir) rr sources fsXmlPath
+        FSharpXml.generateFSharpXmlFile env rr sources fsXmlPath
 
     member p.Clean() =
         let rm p =
