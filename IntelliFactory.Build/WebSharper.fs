@@ -138,6 +138,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let util = WebSharperUtility(fs, log)
     let dom = BuildConfig.AppDomain.Find fs
     let wsHome = WebSharperConfig.WebSharperHome.Find fs
+    let fsXmlFile = FSharpXml.getFSharpXmlFile fs
 
     let sourceFiles =
         FSharpConfig.Sources.Find fs
@@ -231,6 +232,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
                 ])
 
     let build3 (rr: ResolvedReferences) =
+        FSharpXml.writeReferenceFile fs rr
         util.ExecuteWebSharper(rr,
             [
                 match snk with
@@ -271,6 +273,8 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             File.Delete x
 
     let clean () =
+        printfn "Removing %s" fsXmlFile
+        rm fsXmlFile
         rm argsPath
         Option.iter rm docPath
         rm ainfoPath

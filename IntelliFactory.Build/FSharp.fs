@@ -250,7 +250,6 @@ module FSharpXml =
             let output = getFSharpXmlFile env
             let fw = BuildConfig.CurrentFramework.Find env
             let baseDir = BuildConfig.RootDir.Find env
-            let output = FSharpConfig.OutputPath.Find env
             generateFSharpXmlFile (DirectoryInfo baseDir) rr sources output
 
 [<Sealed>]
