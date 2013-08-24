@@ -168,6 +168,11 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         :: FileInfo ainfoPath
         :: [for s in sourceFiles -> FileInfo(Path.Combine(baseDir, s))]
         |> List.append [for r in rr.Paths -> FileInfo(Path.Combine(rootDir, r))]
+        |> List.append [
+                match FSharpConfig.SourcesProject.Find fs with
+                | Some file -> yield file
+                | None -> ()
+            ]
 
     let outputFiles =
         FileInfo outputPath

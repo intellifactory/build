@@ -52,6 +52,8 @@ module FSharpConfig =
     /// Paths to source files to compile.
     val Sources : Parameter<seq<string>>
 
+    val internal SourcesProject : Parameter<option<System.IO.FileInfo>>
+
     /// The kind of project to build.
     val internal Kind : Parameter<FSharpKind>
 
