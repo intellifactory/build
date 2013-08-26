@@ -286,6 +286,11 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
         rm outputPath1
         rm outputPath2
         rm outputPath
+        match cfg.Kind with
+        | WebSharperHtmlWebsite ->
+            let html = WebSharperConfig.WebSharperHtmlDirectory.Find fs
+            Directory.Delete(html, ``recursive`` = true)
+        | _ -> ()
 
     let build () =
         let rr = resolveRefs ()
