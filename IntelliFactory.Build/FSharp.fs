@@ -211,6 +211,17 @@ type FSharpCompilerTask(env: Parameters, log: Log, rr: ResolvedReferences) =
 
 module FSharpXml =
 
+    let makeRelativePath (dir: string) (path: string) =
+        if path.StartsWith(dir) then
+            let p =
+                path.Substring(dir.Length)
+                    .Replace(@"\", "/")
+                    .TrimStart('/')
+            match p with
+            | "" -> "."
+            | _ -> p
+        else path
+
     let fixupPath (env: IParametric) (path: string) =
         let baseDir = DirectoryInfo(FSharpConfig.BaseDir.Find env)
         let rootDir = DirectoryInfo(BuildConfig.RootDir.Find env)
@@ -231,6 +242,7 @@ module FSharpXml =
         Path.Combine(outDir, name + ".fs.xml")
 
     let generateFSharpXmlFile env (rr: ResolvedReferences) sourcePaths output =
+        let rootDir = BuildConfig.RootDir.Find env
         let x = XmlGenerator.Create()
         let xml =
             x.Element "Project" -< [
@@ -240,7 +252,7 @@ module FSharpXml =
                     | Some s ->
                         yield x.Element "Source" + ["File", s]
                 for rr in rr.Paths do
-                    yield x.Element "Reference" + ["File", rr]
+                    yield x.Element "Reference" + ["File", makeRelativePath rootDir rr]
             ]
         xml.WriteFile output
 
