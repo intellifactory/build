@@ -53,8 +53,8 @@ open IntelliFactory.Build
 open IntelliFactory.Core
 
 let common = BuildTool().Verbose()
-let core = common.PackageId("IntelliFactory.Core", "0.2")
-let build = common.PackageId("IntelliFactory.Build", "0.2")
+let core = common.PackageId("IntelliFactory.Core", "0.2-alpha")
+let build = common.PackageId("IntelliFactory.Build", "0.2-alpha")
 
 let coreLib =
     core.FSharp.Library("IntelliFactory.Core")
