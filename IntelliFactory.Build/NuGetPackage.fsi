@@ -72,6 +72,12 @@ type NuGetPackageBuilder =
     /// Configures project Url.
     member ProjectUrl : string -> NuGetPackageBuilder
 
+    /// Gets the computed version.
+    member GetComputedVersion : unit -> string
+
+    /// Gets the computed full path to the `nupkg` file.
+    member GetComputedFileName : unit -> string
+
 [<Sealed>]
 type NuGetSpecProject =
     interface IProject

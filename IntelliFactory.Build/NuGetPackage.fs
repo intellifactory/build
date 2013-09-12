@@ -68,6 +68,12 @@ type NuGetPackageBuilder(settings, env) =
     let rB = ReferenceBuilder.Current.Find env
     let upd cfg = NuGetPackageBuilder({ settings with PackageConfig = cfg }, env )
 
+    member this.GetComputedVersion() =
+        string this.FullVersion
+
+    member this.GetComputedFileName() =
+        Path.GetFullPath(cfg.OutputPath)
+
     member p.AddNuGetRefs(ngr: seq<INuGetReference>) =
         let ng =
             ngr
