@@ -15,6 +15,12 @@
     <Exec Command="build.cmd --clean" WorkingDirectory=".." />
   </Target>
   <ItemGroup>
+    <Compile Include="../src/Logging.fsi">
+      <Link>Logging.fsi</Link>
+    </Compile>
+    <Compile Include="../src/Logging.fs">
+      <Link>Logging.fs</Link>
+    </Compile>
     <Compile Include="Parametrization.fsi" />
     <Compile Include="Parametrization.fs" />
     <Compile Include="FileSystem.fsi" />
