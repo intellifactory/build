@@ -149,6 +149,9 @@ type NuGetPackageBuilder(settings, env) =
     member p.Configure(f) =
         NuGetPackageBuilder({ settings with PackageConfig = f settings.PackageConfig }, env)
 
+    member p.RequireAccept(licenseUrl: string) =
+        p.Configure(fun cfg -> { cfg with LicenseUrl = Some licenseUrl; RequiresLicenseAcceptance = true })
+
     member p.Description d =
         upd { cfg with Description = d }
 
