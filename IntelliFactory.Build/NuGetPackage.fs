@@ -48,7 +48,7 @@ type NuGetPackageConfig =
                     do cfg := { !cfg with Authors = ["Unknown"] }
                     yield "Authors field cannot be empty - setting to Unknown"
             ]
-        (cfg, errors)
+        (!cfg, errors)
                     
     static member Create(id, ver, authors, desc, outPath) =
         {
