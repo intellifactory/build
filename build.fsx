@@ -1,4 +1,4 @@
-#I "packages/NuGet.Core.2.6.0/lib/net40-Client"
+#I "packages/NuGet.Core.2.7.0/lib/net40-Client"
 #r "NuGet.Core.dll"
 #r "System.Xml"
 #r "System.Xml.Linq"
@@ -61,6 +61,8 @@ let coreLib =
         .SourcesFromProject()
         .References(fun rt ->
             [
+                rt.Assembly("System.IO.Compression")
+                rt.Assembly("System.IO.Compression.FileSystem")
                 rt.Assembly("System.Xml")
                 rt.Assembly("System.Xml.Linq")
             ])
@@ -77,7 +79,9 @@ let buildLib =
                 rt.Assembly("Microsoft.Build.Utilities.v4.0")
                 rt.Assembly("System.Xml")
                 rt.Assembly("System.Xml.Linq")
-                rt.NuGet("NuGet.Core").Version("2.6.0").Reference()
+                rt.Assembly("System.IO.Compression")
+                rt.Assembly("System.IO.Compression.FileSystem")
+                rt.NuGet("NuGet.Core").Version("2.7.0").Reference()
                 rt.Project(coreLib)
             ])
         .Embed(["../tools/NuGet/NuGet.exe"])
@@ -88,7 +92,7 @@ let buildTool =
             [
                 rt.Project(coreLib)
                 rt.Project(buildLib)
-                rt.NuGet("NuGet.Core").Version("2.6.0").Reference()
+                rt.NuGet("NuGet.Core").Version("2.7.0").Reference()
             ])
     |> FSharpConfig.OtherFlags.Custom ["--platform:x86"]
 

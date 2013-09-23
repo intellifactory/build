@@ -3,30 +3,31 @@
   <PropertyGroup>
     <ProjectGuid>{d2bf6f2b-ae18-440c-b4ea-e975947275f5}</ProjectGuid>
     <Name>IntelliFactory.Core</Name>
-    <OutputPath>bin</OutputPath>
+    <OutputPath>../build/net45</OutputPath>
+    <OutputType>Library</OutputType>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
   <Import Project="../build/net45/$(Name).proj" />
   <Import Project="$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0/Microsoft.FSharp.targets" />
-  <Target Name="Build">
-    <Exec Command="build.cmd" WorkingDirectory=".." />
-  </Target>
-  <Target Name="Clean">
-    <Exec Command="build.cmd --clean" WorkingDirectory=".." />
-  </Target>
   <ItemGroup>
-    <Compile Include="../src/Logging.fsi">
-      <Link>Logging.fsi</Link>
-    </Compile>
-    <Compile Include="../src/Logging.fs">
-      <Link>Logging.fs</Link>
-    </Compile>
+    <Compile Include="SubCollections.fsi" />
+    <Compile Include="SubCollections.fs" />
+    <Compile Include="Logging.fsi" />
+    <Compile Include="Logging.fs" />
+    <Compile Include="RegexBuilder.fsi" />
+    <Compile Include="RegexBuilder.fs" />
+    <Compile Include="SemanticVersions.fsi" />
+    <Compile Include="SemanticVersions.fs" />
+    <Compile Include="RuntimeFrameworks.fsi" />
+    <Compile Include="RuntimeFrameworks.fs" />
     <Compile Include="Parametrization.fsi" />
     <Compile Include="Parametrization.fs" />
     <Compile Include="FileSystem.fsi" />
     <Compile Include="FileSystem.fs" />
     <Compile Include="XmlTools.fsi" />
     <Compile Include="XmlTools.fs" />
+    <Compile Include="NuGetTools.fsi" />
+    <Compile Include="NuGetTools.fs" />
     <Compile Include="Logs.fsi" />
     <Compile Include="Logs.fs" />
     <Compile Include="FastInvoke.fsi" />
@@ -52,6 +53,14 @@
     <Compile Include="AssemblyResolution.fsi" />
     <Compile Include="AssemblyResolution.fs" />
     <Compile Include="AutoExports.fs" />
+    <Compile Include="VisualStudioTools.Utils.fsi" />
+    <Compile Include="VisualStudioTools.Utils.fs" />
+    <Compile Include="VisualStudioTools.NuGet.fsi" />
+    <Compile Include="VisualStudioTools.NuGet.fs" />
+    <Compile Include="VisualStudioTools.Templates.fsi" />
+    <Compile Include="VisualStudioTools.Templates.fs" />
+    <Compile Include="VisualStudioTools.Extensions.fsi" />
+    <Compile Include="VisualStudioTools.Extensions.fs" />
     <Compile Include="Annotations.fs" />
   </ItemGroup>
 </Project>

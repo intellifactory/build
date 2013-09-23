@@ -3,18 +3,15 @@
   <PropertyGroup>
     <ProjectGuid>{564ebbd5-f76f-4806-8b8e-b7da4b65bc69}</ProjectGuid>
     <Name>IB</Name>
-    <OutputPath>bin</OutputPath>
+    <OutputPath>../build/net45</OutputPath>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <OutputType>Executable</OutputType>
     <ProjectType>winexe</ProjectType>
   </PropertyGroup>
   <Import Project="../build/net45/$(Name).proj" />
   <Import Project="$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0/Microsoft.FSharp.targets" />
-  <Target Name="Build">
-    <Exec Command="build.cmd" WorkingDirectory=".." />
-  </Target>
-  <Target Name="Clean">
-    <Exec Command="build.cmd --clean" WorkingDirectory=".." />
-  </Target>
+  <Target Name="Build" />
+  <Target Name="Clean" />
   <ItemGroup>
     <Compile Include="Main.fs" />
   </ItemGroup>

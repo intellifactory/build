@@ -2,7 +2,7 @@
 IF NOT "%NuGetHome%"=="" GOTO :nuget
 SET NuGetHome=tools\NuGet
 :nuget
-"%NuGetHome%\NuGet.exe" install NuGet.Core -version 2.6.0 -o packages
+"%NuGetHome%\NuGet.exe" install NuGet.Core -version 2.7.0 -o packages
 IF NOT "%FSharpHome%"=="" GOTO :fs
 SET PF=%ProgramFiles(x86)%
 IF NOT "%PF%"=="" GOTO w64

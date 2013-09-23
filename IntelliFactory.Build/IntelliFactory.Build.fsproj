@@ -3,19 +3,13 @@
   <PropertyGroup>
     <ProjectGuid>6af3b6cd-0373-4b08-abf3-d74355f592b0</ProjectGuid>
     <Name>IntelliFactory.Build</Name>
-    <OutputPath>bin</OutputPath>
+    <OutputPath>../build/net45</OutputPath>
+    <OutputType>Library</OutputType>
     <PrivateRefs>False</PrivateRefs>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
-
   <Import Project="../build/net45/$(Name).proj" />
   <Import Project="$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0/Microsoft.FSharp.targets" />
-  <Target Name="Build">
-    <Exec Command="build.cmd" WorkingDirectory=".." />
-  </Target>
-  <Target Name="Clean">
-    <Exec Command="build.cmd --clean" WorkingDirectory=".." />
-  </Target>
   <ItemGroup>
     <Compile Include="VsixPackages.fs" />
     <Compile Include="VsTemplates.fsi" />
