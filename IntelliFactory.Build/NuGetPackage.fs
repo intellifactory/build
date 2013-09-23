@@ -40,6 +40,16 @@ type NuGetPackageConfig =
                 LicenseUrl = Some "http://www.apache.org/licenses/LICENSE-2.0"
         }
 
+    member cfg.Validate() =
+        let cfg = ref cfg
+        let errors =
+            [
+                if cfg.Value.Authors.IsEmpty then
+                    do cfg := { !cfg with Authors = ["Unknown"] }
+                    yield "Authors field cannot be empty - setting to Unknown"
+            ]
+        (!cfg, errors)
+                    
     static member Create(id, ver, authors, desc, outPath) =
         {
             Authors = authors
@@ -62,6 +72,7 @@ type NuGetPackageSettings =
 
 [<Sealed>]
 type NuGetPackageBuilder(settings, env) =
+    let log = Log.Create<NuGetPackageBuilder>(env)
     let fwt = Frameworks.Current.Find env
     let rs = References.Current.Find env
     let cfg = settings.PackageConfig
@@ -111,6 +122,9 @@ type NuGetPackageBuilder(settings, env) =
         SafeNuGetSemanticVersion(cfg.Version, ?suffix = cfg.VersionSuffix)
 
     member p.Build() =
+        let (cfg, errors) = cfg.Validate()
+        errors
+        |> Seq.iter (fun err -> log.Warn(err))
 //        let rr = References.Current.Find(env).ResolveReferences fw refs
         let pb = SafeNuGetPackageBuilder()
         pb.Id <- cfg.Id
@@ -148,6 +162,9 @@ type NuGetPackageBuilder(settings, env) =
 
     member p.Configure(f) =
         NuGetPackageBuilder({ settings with PackageConfig = f settings.PackageConfig }, env)
+
+    member p.RequireAccept(licenseUrl: string) =
+        p.Configure(fun cfg -> { cfg with LicenseUrl = Some licenseUrl; RequiresLicenseAcceptance = true })
 
     member p.Description d =
         upd { cfg with Description = d }
@@ -187,9 +204,7 @@ type NuGetPackageBuilder(settings, env) =
             let authors =
                 match comp with
                 | Some comp -> [comp.Name]
-                | None ->
-                    log.Warn("Building NuGet package {0} requires the Authors field - assumed 'Unknown'", pid)
-                    ["Unknown"]
+                | None -> []
             {
                 NuGetPackageConfig.Create(pid, fvn, authors, pid, path) with
                     VersionSuffix = vn.Suffix
