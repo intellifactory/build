@@ -350,7 +350,6 @@ type WebSharperHostWebsite(env: IParametric) =
     let refs = FSharpConfig.References.Find env
     let baseDir = FSharpConfig.BaseDir.Find env
     let binDir = Path.Combine(baseDir, "bin")
-    let scriptsFolder = Path.Combine(baseDir, "Scripts")
 
     interface IProject with
 
@@ -372,7 +371,7 @@ type WebSharperHostWebsite(env: IParametric) =
             util.ExecuteWebSharper(rr,
                 [
                     yield "-unpack"
-                    yield scriptsFolder
+                    yield baseDir
                     yield! refs
                 ])
 
