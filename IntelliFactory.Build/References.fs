@@ -223,9 +223,14 @@ module AssemblySets =
     /// TODO: can detect version conflicts and missing refs here.
     let buildAssemblySet (files: seq<ResolvedReference>) =
         files
-        |> Seq.distinctBy (fun f ->
-            let n = AssemblyName.GetAssemblyName f.Path
-            n |> string)
+        |> Seq.choose (fun f ->
+            match Path.GetExtension(f.Path).ToLower() with
+            | ".dll" ->
+                let n = AssemblyName.GetAssemblyName(f.Path)
+                Some (string n, f)
+            | _ -> None)
+        |> Seq.distinctBy fst
+        |> Seq.map snd
         |> Reify
 
 [<Sealed>]
