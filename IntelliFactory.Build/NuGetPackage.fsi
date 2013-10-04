@@ -29,6 +29,7 @@ type NuGetPackageConfig =
         OutputPath : string
         ProjectUrl : option<string>
         RequiresLicenseAcceptance : bool
+        Title : option<string>
         Version : Version
         VersionSuffix : option<string>
     }

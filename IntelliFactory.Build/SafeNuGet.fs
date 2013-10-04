@@ -295,6 +295,10 @@ type SafeNuGetPackageBuilder(p: PackageBuilder) =
         with get () = p.RequireLicenseAcceptance
         and set x = p.RequireLicenseAcceptance <- x
 
+    member b.Title
+        with get () = p.Title
+        and set x = p.Title <- x
+
     member b.Version
         with get () = SafeNuGetSemanticVersion(p.Version)
         and set (v: SafeNuGetSemanticVersion) =

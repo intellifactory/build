@@ -29,6 +29,7 @@ type NuGetPackageConfig =
         OutputPath : string
         ProjectUrl : option<string>
         RequiresLicenseAcceptance : bool
+        Title : option<string>
         Version : Version
         VersionSuffix : option<string>
     }
@@ -60,6 +61,7 @@ type NuGetPackageConfig =
             OutputPath = outPath
             ProjectUrl = None
             RequiresLicenseAcceptance = false
+            Title = None
             Version = ver
             VersionSuffix = None
         }
@@ -130,6 +132,7 @@ type NuGetPackageBuilder(settings, env) =
         pb.Id <- cfg.Id
         cfg.LicenseUrl |> Option.iter (fun url -> pb.LicenseUrl <- Uri url)
         pb.RequireLicenseAcceptance <- cfg.RequiresLicenseAcceptance
+        cfg.Title |> Option.iter (fun t -> pb.Title <- t)
         cfg.ProjectUrl |> Option.iter (fun url -> pb.ProjectUrl <- Uri url)
         pb.Authors <- cfg.Authors
         pb.Description <- cfg.Description

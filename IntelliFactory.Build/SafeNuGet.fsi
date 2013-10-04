@@ -100,4 +100,5 @@ type internal SafeNuGetPackageBuilder =
     member LicenseUrl : Uri with get, set
     member ProjectUrl : Uri with get, set
     member RequireLicenseAcceptance : bool with get, set
+    member Title : string with get, set
     member Version : SafeNuGetSemanticVersion with get, set
