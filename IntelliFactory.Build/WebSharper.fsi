@@ -24,6 +24,9 @@ module WebSharperConfig =
     /// Path to the directory containing WebSharper tools.
     val WebSharperHome : Parameter<option<string>>
 
+    /// Path to the HTML output directory.
+    val WebSharperHtmlDirectory : Parameter<string>
+
 [<Sealed>]
 type WebSharperProject =
     interface INuGetExportingProject
