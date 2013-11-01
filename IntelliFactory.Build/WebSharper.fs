@@ -39,6 +39,14 @@ module WebSharperConfig =
         Parameter.Define (fun env ->
             Path.Combine(BuildConfig.BuildDir.Find env, "html"))
 
+    let AppDomain =
+        Parameter.Define (fun env ->
+            let setup = AppDomainSetup()
+            match WebSharperHome.Find env with
+            | None -> setup.ApplicationBase <- AppDomain.CurrentDomain.BaseDirectory
+            | Some wsHome -> setup.ApplicationBase <- wsHome
+            AppDomain.CreateDomain("WebSharper", null, setup))
+
 module WebSharperReferences =
 
     let Compute env =
@@ -89,7 +97,7 @@ type WebSharperProjectConfig =
 [<Sealed>]
 type WebSharperUtility(env: IParametric, log: Log) =
     let wsHome = WebSharperConfig.WebSharperHome.Find env
-    let dom = BuildConfig.AppDomain.Find env
+    let dom = WebSharperConfig.AppDomain.Find env
     let rt = References.Current.Find env
     let fw = BuildConfig.CurrentFramework.Find env
 
@@ -136,7 +144,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
     let snk = BuildConfig.KeyFile.Find fs
     let baseDir = FSharpConfig.BaseDir.Find fs
     let util = WebSharperUtility(fs, log)
-    let dom = BuildConfig.AppDomain.Find fs
+    let dom = WebSharperConfig.AppDomain.Find fs
     let wsHome = WebSharperConfig.WebSharperHome.Find fs
     let fsXmlFile = FSharpXml.getFSharpXmlFile fs
 
