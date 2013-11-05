@@ -54,6 +54,7 @@ module WebSharperReferences =
         let wsHome = WebSharperConfig.WebSharperHome.Find env
         let paths =
             [
+                "IntelliFactory.Core.dll"
                 "IntelliFactory.Formlet.dll"
                 "IntelliFactory.Html.dll"
                 "IntelliFactory.JavaScript.dll"
