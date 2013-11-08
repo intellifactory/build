@@ -22,6 +22,7 @@ open IntelliFactory.Core
 type WebSharperKind =
     | WebSharperExtension
     | WebSharperHtmlWebsite
+    | WebSharperSiteletWebsite
     | WebSharperLibrary
 
 module WebSharperConfig =
@@ -89,6 +90,7 @@ module WebSharperReferences =
                 Path.Combine(wh, p)
                 |> rb.File)
             |> Seq.ofList
+        |> Seq.append (Seq.singleton (rb.Assembly "System.Web"))
 
 type WebSharperProjectConfig =
     {
@@ -134,6 +136,27 @@ type WebSharperUtility(env: IParametric, log: Log) =
 
     member u.GetWebSharperToolPath(rr) = wsToolPath rr
     member u.Home = wsHome
+
+    member u.UnpackResources() =
+        let refs = FSharpConfig.References.Find env
+        let rr = References.Current.Find(env).ResolveReferences fw refs
+        let baseDir = FSharpConfig.BaseDir.Find env
+        let binDir = Path.Combine(baseDir, "bin")
+        let refs = ResizeArray()
+        for r in rr.References do
+            if not r.IsFrameworkReference then
+                let p = r.Path
+                let fc = FileSystem.Content.ReadBinaryFile p
+                fc.WriteFile(Path.Combine(binDir, Path.GetFileName p))
+                refs.Add p
+        let fpw = FSharpProjectWriter(env)
+        fpw.Write rr
+        u.ExecuteWebSharper(rr,
+            [
+                yield "-unpack"
+                yield baseDir
+                yield! refs
+            ])
 
 [<Sealed>]
 type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
@@ -198,7 +221,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             Parameters.Get fs
             |> FSharpConfig.Sources.Update(Seq.append [ainfoPath])
         match cfg.Kind with
-        | WebSharperLibrary | WebSharperHtmlWebsite ->
+        | WebSharperLibrary | WebSharperHtmlWebsite | WebSharperSiteletWebsite ->
             env
             |> FSharpConfig.OutputPath.Custom outputPath2
             |> FSharpConfig.DocPath.Custom docPath
@@ -224,7 +247,9 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
 
     let build2 (rr: ResolvedReferences) =
         match cfg.Kind with
-        | WebSharperLibrary | WebSharperHtmlWebsite -> ()
+        | WebSharperLibrary
+        | WebSharperHtmlWebsite
+        | WebSharperSiteletWebsite-> ()
         | WebSharperExtension ->
             util.ExecuteWebSharper(rr,
                 [
@@ -282,6 +307,12 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
                 ])
         | _ -> ()
 
+    let build5 () =
+        match cfg.Kind with
+        | WebSharperSiteletWebsite ->
+            util.UnpackResources()
+        | _ -> ()
+
     let rm x =
         if IsFile x then
             File.Delete x
@@ -316,6 +347,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             build2 rr
             build3 rr
             build4 rr
+            build5 ()
             rd.Touch()
         else
             log.Info("Skipping {0}", project.Name)
@@ -367,22 +399,7 @@ type WebSharperHostWebsite(env: IParametric) =
             FSharpXml.writeReferenceFile env rr
 
         member h.Build() =
-            let rr = References.Current.Find(env).ResolveReferences fw refs
-            let refs = ResizeArray()
-            for r in rr.References do
-                if not r.IsFrameworkReference then
-                    let p = r.Path
-                    let fc = FileSystem.Content.ReadBinaryFile p
-                    fc.WriteFile(Path.Combine(binDir, Path.GetFileName p))
-                    refs.Add p
-            let fpw = FSharpProjectWriter(env)
-            fpw.Write rr
-            util.ExecuteWebSharper(rr,
-                [
-                    yield "-unpack"
-                    yield baseDir
-                    yield! refs
-                ])
+            util.UnpackResources()
 
         member h.Clean() =
             Directory.Delete(binDir, true)
@@ -429,6 +446,12 @@ type WebSharperProjects(env) =
 
     member ps.HtmlWebsite name =
         make name { Kind = WebSharperHtmlWebsite }
+
+    member ps.SiteletWebsite name =
+        let p = make name { Kind = WebSharperSiteletWebsite }
+        let pD = FSharpConfig.BaseDir.Find p
+        p
+        |> BuildConfig.OutputDir.Custom (Path.Combine(pD, "bin"))
 
     member ps.HostWebsite name =
         WebSharperHostWebsite(configWithWebReference name)
