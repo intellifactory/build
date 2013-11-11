@@ -137,9 +137,9 @@ type WebSharperUtility(env: IParametric, log: Log) =
     member u.GetWebSharperToolPath(rr) = wsToolPath rr
     member u.Home = wsHome
 
-    member u.UnpackResources() =
+    member u.UnpackResources(rr: ResolvedReferences, withOutput: bool) =
         let refs = FSharpConfig.References.Find env
-        let rr = References.Current.Find(env).ResolveReferences fw refs
+        let out = FSharpConfig.OutputPath.Find env
         let baseDir = FSharpConfig.BaseDir.Find env
         let binDir = Path.Combine(baseDir, "bin")
         let refs = ResizeArray()
@@ -156,6 +156,8 @@ type WebSharperUtility(env: IParametric, log: Log) =
                 yield "-unpack"
                 yield baseDir
                 yield! refs
+                if withOutput then
+                    yield out
             ])
 
 [<Sealed>]
@@ -307,10 +309,10 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
                 ])
         | _ -> ()
 
-    let build5 () =
+    let build5 rr =
         match cfg.Kind with
         | WebSharperSiteletWebsite ->
-            util.UnpackResources()
+            util.UnpackResources(rr, withOutput = true)
         | _ -> ()
 
     let rm x =
@@ -347,7 +349,7 @@ type WebSharperProject(cfg: WebSharperProjectConfig, fs: FSharpProject) =
             build2 rr
             build3 rr
             build4 rr
-            build5 ()
+            build5 rr
             rd.Touch()
         else
             log.Info("Skipping {0}", project.Name)
@@ -399,7 +401,8 @@ type WebSharperHostWebsite(env: IParametric) =
             FSharpXml.writeReferenceFile env rr
 
         member h.Build() =
-            util.UnpackResources()
+            let rr = References.Current.Find(env).ResolveReferences fw refs
+            util.UnpackResources(rr, withOutput = false)
 
         member h.Clean() =
             Directory.Delete(binDir, true)
