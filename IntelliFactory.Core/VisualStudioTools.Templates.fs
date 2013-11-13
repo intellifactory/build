@@ -21,6 +21,10 @@ module Templates =
     open Microsoft.Win32
     module X = IntelliFactory.Core.XmlTools
     module NG = NuGet
+
+    #if NET40
+    #else
+
     type Content = Utils.Content
 
     let xmlNamespace = "http://schemas.microsoft.com/developer/vstemplate/2005"
@@ -527,3 +531,5 @@ module Templates =
                 ArchZip = zip
                 ArchZipFileName = zipName
             }
+
+    #endif

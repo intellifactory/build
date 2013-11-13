@@ -23,6 +23,10 @@ module Extensions =
     open System.Text
     module X = IntelliFactory.Core.XmlTools
     module NG = NuGet
+
+    #if NET40
+    #else
+
     type Content = Utils.Content
 
     let ( +/ ) a b =
@@ -508,3 +512,4 @@ module Extensions =
                 VFZip = Content.ReadBinaryFile(fullPath)
             }
 
+    #endif

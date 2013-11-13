@@ -16,6 +16,10 @@ namespace IntelliFactory.Core.VisualStudioTools
 
 module NuGet =
     open System
+
+    #if NET40
+    #else
+
     type Content = Utils.Content
 
     type Package =
@@ -35,3 +39,5 @@ module NuGet =
                 PId = id
                 PVersion = version
             }
+
+    #endif

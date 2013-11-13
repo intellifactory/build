@@ -19,6 +19,9 @@ module Utils =
     open System
     open System.IO
 
+    #if NET40
+    #else
+
     /// A simple representation for text and binary contents.
     [<Sealed>]
     type Content =
@@ -46,3 +49,5 @@ module Utils =
 
         /// Creates a zip archive.
         static member Zip : seq<string * Content> -> Content
+
+    #endif

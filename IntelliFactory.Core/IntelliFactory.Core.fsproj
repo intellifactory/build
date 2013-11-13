@@ -3,13 +3,15 @@
   <PropertyGroup>
     <ProjectGuid>{d2bf6f2b-ae18-440c-b4ea-e975947275f5}</ProjectGuid>
     <Name>IntelliFactory.Core</Name>
-    <OutputPath>../build/net45</OutputPath>
+    <OutputPath>../build/net40</OutputPath>
     <OutputType>Library</OutputType>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <DefineConstants>NET40</DefineConstants>
   </PropertyGroup>
-  <Import Project="../build/net45/$(Name).proj" />
+  <Import Project="../build/net40/$(Name).proj" />
   <Import Project="$(MSBuildExtensionsPath32)/../Microsoft SDKs/F#/3.0/Framework/v4.0/Microsoft.FSharp.targets" />
   <ItemGroup>
+    <Compile Include="Net40Utility.fs" />
     <Compile Include="SubCollections.fsi" />
     <Compile Include="SubCollections.fs" />
     <Compile Include="Logging.fsi" />
@@ -48,8 +50,10 @@
     <Compile Include="TextPipes.fs" />
     <Compile Include="IOExtensions.fsi" />
     <Compile Include="IOExtensions.fs" />
-    <Compile Include="Processes.fsi" />
-    <Compile Include="Processes.fs" />
+    <Compile Include="ProcessAgent.fsi" />
+    <Compile Include="ProcessAgent.fs" />
+    <Compile Include="ProcessService.fsi" />
+    <Compile Include="ProcessService.fs" />
     <Compile Include="AssemblyResolution.fsi" />
     <Compile Include="AssemblyResolution.fs" />
     <Compile Include="AutoExports.fs" />

@@ -17,6 +17,10 @@ namespace IntelliFactory.Core.VisualStudioTools
 /// NuGet-related functionality.
 module NuGet =
     open System
+
+    #if NET40
+    #else
+
     type Content = Utils.Content
 
     /// A compiled NuGet package together with its contents.
@@ -34,3 +38,5 @@ module NuGet =
 
         /// Creates a new instance.
         static member Create : id: string * version: string * Content -> Package
+
+    #endif

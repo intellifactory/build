@@ -28,7 +28,8 @@ open NuGet
 #load "IntelliFactory.Core/Futures.fs"
 #load "IntelliFactory.Core/TextPipes.fs"
 #load "IntelliFactory.Core/IOExtensions.fs"
-#load "IntelliFactory.Core/Processes.fs"
+#load "IntelliFactory.Core/ProcessAgent.fs"
+#load "IntelliFactory.Core/ProcessService.fs"
 #load "IntelliFactory.Core/AutoExports.fs"
 #load "IntelliFactory.Build/Cache.fs"
 #load "IntelliFactory.Build/Frameworks.fs"
@@ -67,6 +68,11 @@ let coreLib =
                 rt.Assembly("System.Xml.Linq")
             ])
 
+let coreLib40 =
+    coreLib
+    |> BuildConfig.CurrentFramework.Custom common.Framework.Net40
+    |> FSharpConfig.OtherFlags.Custom ["--define:NET40"]
+
 let buildLib =
     build.FSharp.Library("IntelliFactory.Build")
         .SourcesFromProject()
@@ -102,6 +108,7 @@ let corePkg =
         .ProjectUrl("http://bitbucket.com/IntelliFactory/build")
         .Apache20License()
         .Add(coreLib)
+        .Add(coreLib40)
 
 let buildPkg =
     build.NuGet.CreatePackage()
@@ -116,6 +123,7 @@ let buildPkg =
 
 common.Solution [
     coreLib
+    coreLib40
     buildLib
     buildTool
     corePkg

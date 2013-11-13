@@ -23,6 +23,9 @@ module Extensions =
     open System
     open System.Globalization
 
+    #if NET40
+    #else
+
     /// Represents VisualStudio editions.
     [<Sealed>]
     type VSEdition =
@@ -116,3 +119,5 @@ module Extensions =
 
         /// Reads a `.vsix` file.
         static member FromFile : fullPath: string -> VsixFile
+
+    #endif

@@ -529,11 +529,14 @@ type FSharpInteractive(env) =
             |> String.concat " "
         let pc =
             {
-                ProcessHandle.Configure(fsiToolPath, args) with
-                    OnStandardError = stderr.Write
-                    OnStandardOutput = stdout.Write
+                ProcessAgent.Configure
+                    ProcessAgent.MessageType.ASCII
+                    fsiToolPath with
+                    Arguments = args
+                    OnError = stderr.Write
+                    OnOutput = stdout.Write
             }
-        let ph = pc.Start()
+        let ph = ProcessAgent.Start pc
         let exitCode =
             ph.ExitCode.Await()
             |> Async.RunSynchronously

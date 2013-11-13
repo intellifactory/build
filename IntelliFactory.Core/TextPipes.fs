@@ -131,18 +131,24 @@ type FunctionTextWriter(i: TextMessage -> unit, cfg) =
     override w.WriteLine(data: string) = i (OnWriteLine data)
     override w.WriteLine(data: char[], offset: int, count: int) = i (OnWriteLine (String(data, offset, count)))
 
+    #if NET40
+    #else
     override w.WriteAsync(data: char) = w.Write(data); task ()
     override w.WriteAsync(data: string) = w.Write(data); task ()
     override w.WriteAsync(d, o, c) = w.Write(d, o, c); task c
-
     override w.WriteLineAsync(data: char) = w.WriteLine(data); task ()
     override w.WriteLineAsync(data: string) = w.WriteLine(data); task ()
     override w.WriteLineAsync(d, o, c) = w.WriteLine(d, o, c); task c
+    #endif
 
     override w.Encoding = enc
 
     override w.Flush() = i OnFlush
+
+    #if NET40
+    #else
     override w.FlushAsync() = i OnFlush; task ()
+    #endif
 
 [<Sealed>]
 type NonBlockingTextWriter =
@@ -246,6 +252,8 @@ module TextPipes =
             if closed then 0 else
                 x.ReadAsync(buf, pos, ct).Result
 
+        #if NET40
+        #else
         override x.ReadAsync(buf, pos, ct) =
             if closed then Task.FromResult 0 else
                 Async.FromContinuations(fun (ok, _, _) ->
@@ -255,6 +263,7 @@ module TextPipes =
                     }
                     |> agent.Post)
                 |> Async.StartAsTask
+        #endif
 
 [<Sealed>]
 type TextPipe private (cfg: Conf) =

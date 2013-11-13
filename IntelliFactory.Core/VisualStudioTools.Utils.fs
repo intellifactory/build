@@ -20,6 +20,9 @@ module Utils =
     open System.IO.Compression
     open System.Text
 
+    #if NET40
+    #else
+
     let enc = UTF8Encoding(false, true)
 
     type Content =
@@ -79,3 +82,5 @@ module Utils =
                     content.Write(s)
             memory.ToArray()
             |> Content.FromBytes
+
+    #endif

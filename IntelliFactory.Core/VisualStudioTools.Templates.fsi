@@ -22,6 +22,10 @@ module Templates =
     open System
     open System.IO
     module NG = NuGet
+
+    #if NET40
+    #else
+
     type Content = Utils.Content
 
     /// Defines a project item corresponding to the `ProjectItem` XML element
@@ -219,3 +223,4 @@ module Templates =
 
 
         (* TODO: item templates, multi-project (project group) templates *)
+    #endif
